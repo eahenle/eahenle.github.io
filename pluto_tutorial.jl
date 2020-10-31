@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.12.4
+# v0.12.6
 
 using Markdown
 using InteractiveUtils
@@ -24,7 +24,6 @@ md"""
 Pluto is awesome!  I use it for everything.  Here's how I found it useful on the homework for plotting Fourier series approximations.
 
 ## Pluto
-
 To use Pluto, you need Julia.  [Download here](https://julialang.org/downloads/) and install it.  Open Julia to get the terminal, a.k.a. REPL.  In the REPL, you can run Julia code line-by-line.  You can also use it to install new libraries for Julia.  Hit `]` to enter `pkg` mode, type the line `add Pluto, PlutoUI, PyPlot`, and hit enter.  This may take a while.  Make a coffee or something ☕
 
 When that's done, hit backspace to return to the Julia prompt of the REPL, and run the line `using Pluto, PlutoUI, PyPlot`.  This may take several minutes  ⌚⌚⌚
@@ -325,4 +324,4 @@ plot_fourier_sin(original_function, coefficients, "Reactive Plot", N=nb_terms)
 # ╟─d61513b0-1a30-11eb-179a-fd4e6ddaa0f5
 # ╠═705003a0-1a2b-11eb-3ab1-7f1a3e3be8b9
 # ╟─214be530-1a2b-11eb-3056-69eb60497c64
-# ╟─f8903ec0-1a2f-11eb-1dd8-a91986cc4d1a
+# ╠═f8903ec0-1a2f-11eb-1dd8-a91986cc4d1a
