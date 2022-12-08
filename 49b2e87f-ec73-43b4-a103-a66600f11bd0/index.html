@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<title>Latent Cage Space</title>
+	<title>Molecules in Latent Space</title>
 	<script src="https://d3js.org/d3.v4.js" charset="utf-8"></script>
 
 	<style>
@@ -23,25 +23,20 @@
 </head>
 <body>
 	<script>
-		// Our D3 code will go here.
-
-		// Dynamic Data loaded from CSV
-		var mofData = [];
+		var molData = [];
 
 		d3.csv("assets/latent_dim.csv", function(d){
 			return{
-				cage_image : d.cage_image,
+				molecule_image : d.molecule_image,
 				x : +d.x1,
 				y : +d.x2
 			};
 		}, function(error, rows){
-			mofData = rows;
-			//console.log(mofData);
+			molData = rows;
 			createVisualization();
 		})
 
 		function createVisualization(){
-
 			// Set dimensions for the image
 			var w = 700;
 			var h = 700;
@@ -56,11 +51,11 @@
 				;
 
 			// Various information about the input data so it will scale accordingly
-			var arrayLength = mofData.length;
-			var xMax = d3.max(mofData, function(d) { return d.x; });
-			var xMin = d3.min(mofData, function(d) { return d.x; });
-			var yMax = d3.max(mofData, function(d) { return d.y; });
-			var yMin = d3.min(mofData, function(d) { return d.y; });
+			var arrayLength = molData.length;
+			var xMax = d3.max(molData, function(d) { return d.x; });
+			var xMin = d3.min(molData, function(d) { return d.x; });
+			var yMax = d3.max(molData, function(d) { return d.y; });
+			var yMin = d3.min(molData, function(d) { return d.y; });
 			var max = xMax > yMax ? xMax : yMax; // make one max variable so both axes are on same scale
 			var min = xMin < yMin ? xMin : yMin; // make one min variable so both axes are on same scale
 
@@ -119,14 +114,14 @@
 			svg.append("text")
 				.attr("class", "Title")
 				.attr("text-anchor", "middle")
-				.text("Latent Cage Space")
+				.text("Latent Molecular Space")
 				.attr("transform", "translate(" + (w / 2) + ", " + (0.5 * padding) + ")")
 				.attr("font-size", "20")
 				.attr("font-family", "'Open Sans', sans-serif");
 
-			// Create circles from mofData
+			// Create circles from molData
 			svg.selectAll("circle")
-				.data(mofData)
+				.data(molData)
 				.enter()
 				.append("circle")
 				.attr("cx", function(d){
@@ -139,14 +134,14 @@
 				.attr("fill", "steelblue")
 				.on("mouseover", function(d){
 	                //tooltip.html(string); //this will add the image on mouseover
-					tooltip.style("visibility", "visible").text((d.cage_image).substring(0, (d.cage_image).indexOf("_no_box.png")));
+					tooltip.style("visibility", "visible").text((d.molecule_image).substring(0, (d.molecule_image).indexOf("_no_box.png")));
 					tooltip2.style("visibility", "visible");
 				})
 				.on("mousemove", function(d){
-	                var string = "<img src=/images/all_cages/" + d.cage_image + " style='height: " + image_size + "px; width: " + image_size + "px; object-fit: contain'>";
+	                var string = "<img src=images/molecules/" + d.molecule_image + " style='height: " + image_size + "px; width: " + image_size + "px; object-fit: contain'>";
 					// this will add the image and text on mouseover
 					return {
-						text : tooltip.text((d.cage_image).substring(0, (d.cage_image).indexOf("_no_box.png")))
+						text : tooltip.text((d.molecule_image).substring(0, (d.molecule_image).indexOf("_no_box.png")))
 							.style("left",(d3.event.pageX + (d3.event.pageX > w / 2 ? -(40 + 50) : 40))+"px")
 							.style("top", (d3.event.pageY + (d3.event.pageY > h / 2 ? -(10 + 10) : 00))+"px"),
 						image : tooltip2.html(string)
