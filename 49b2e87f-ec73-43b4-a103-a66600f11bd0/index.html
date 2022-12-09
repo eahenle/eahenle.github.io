@@ -25,18 +25,17 @@
 	var molData = []
 
 	d3.csv(
-		"https://eahenle.github.io/49b2e87f-ec73-43b4-a103-a66600f11bd0/data.csv", 
+		"data.csv", 
 		function(d){
 			return {
-				molecule_image : d.molecule_image,
-				x : +d.x1,
-				y : +d.x2
+				index : d.index,
+				x : +d.x,
+				y : +d.y,
+				label : d.active
 			}
 		}, 
 		function(error, rows){
-			console.log("ERROR?", error)
 			molData = rows
-			console.log("DATA", molData)
 			createVisualization()
 		}
 	)
@@ -61,17 +60,17 @@
 		var xMin = d3.min(molData, function(d) { return d.x; })
 		var yMax = d3.max(molData, function(d) { return d.y; })
 		var yMin = d3.min(molData, function(d) { return d.y; })
-		var max = xMax > yMax ? xMax : yMax // make one max variable so both axes are on same scale
-		var min = xMin < yMin ? xMin : yMin // make one min variable so both axes are on same scale
+		// var max = xMax > yMax ? xMax : yMax // make one max variable so both axes are on same scale
+		// var min = xMin < yMin ? xMin : yMin // make one min variable so both axes are on same scale
 
 		// Creating scales so all data will fit in the graph
 		var xScale = d3.scaleLinear()
-			.domain([min, max]) // the input domain
+			.domain([xMin, xMax]) // the input domain
 			.range([padding, w - padding]) // the output range
 			;
 
 		var yScale = d3.scaleLinear()
-			.domain([min, max]) // the input domain
+			.domain([yMin, yMax]) // the input domain
 			.range([h - padding, padding]) // the output range, flipping the order so
 											// that high values are on top
 			;
@@ -141,17 +140,13 @@
 			.attr("r", 5)
 			.attr("fill", "steelblue")
 			.on("mouseover", function(d){
-				tooltip.style("visibility", "visible").text((d.molecule_image).substring(0, (d.molecule_image).indexOf("_no_box.png")))
-				tooltip2.style("visibility", "visible")
+				tooltip.style("visibility", "visible")
 			})
 			.on("mousemove", function(d){
-				var string = "<img src=images/molecules/" + d.molecule_image + " style='height: " + image_size + "px; width: " + image_size + "px; object-fit: contain'>"
+				var string = "<img src=img/" + d.index + ".png style='height: " + image_size + "px; width: " + image_size + "px; object-fit: contain'>"
 				// this will add the image and text on mouseover
 				return {
-					text : tooltip.text((d.molecule_image).substring(0, (d.molecule_image).indexOf("_no_box.png")))
-						.style("left",(d3.event.pageX + (d3.event.pageX > w / 2 ? -(40 + 50) : 40))+"px")
-						.style("top", (d3.event.pageY + (d3.event.pageY > h / 2 ? -(10 + 10) : 00))+"px"),
-					image : tooltip2.html(string)
+					image : tooltip.html(string)
 						.style("left", (d3.event.pageX + (d3.event.pageX > w / 2 ? -(10 + image_size) : 10)) + "px")
 						.style("top", (d3.event.pageY + (d3.event.pageY > h / 2 ? -(20 + image_size) : 20)) + "px")
 						.style("font-color", "white")
@@ -161,7 +156,6 @@
 			})
 			.on("mouseout", function(d){
 				tooltip.style("visibility", "hidden")
-				tooltip2.style("visibility", "hidden")
 			})
 			;
 
