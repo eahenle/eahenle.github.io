@@ -6,9 +6,8 @@
 .axis line{
     fill: none;
     stroke: #000;
-    sharp-rendering:crispEdges;
 }
 
 circle:hover{
-    fill: red;
+    fill: orange;
 }
