@@ -9,7 +9,7 @@ d3.csv(
             index : d.index,
             x : +d.x,
             y : +d.y,
-            label : d.active // note: label is switched (active = 'false')
+            label : d.active //! note: label is switched (active = 'false')
         }
     }, 
     function(error, rows) {
@@ -21,18 +21,20 @@ d3.csv(
 // generate interactive plot
 function createVisualization() {
     // image dimensions
-    var w = 1000
-    var h = 1000
+    var w = 700
+    var h = 400
     // axis padding
     var padding = 75
     // toolitp image box edge length
     var image_size = 200
 
-    // create the SVG
-    var svg = d3.select("body")
-        .append("svg")
-        .attr("width", w)
-        .attr("height", h)
+    // create the plot SVG
+    var plotdiv = d3.select("#plot")
+    plotdiv.append("svg")
+    plotdiv.attr("z-index", 1).style("display", "inline-block")
+    // set plot size
+    var plotsvg = plotdiv.select("svg")
+    plotsvg.attr("width", w).attr("height", h)
 
     // set plot scaling
     var xMax = d3.max(molData, function(d) { return d.x }) + padding
@@ -42,8 +44,9 @@ function createVisualization() {
         .range([padding, w - padding]) 
 
     var yMax = d3.max(molData, function(d) { return d.y }) + padding
+    var yMin = d3.min(molData, function(d) { return d.y }) - padding
     var yScale = d3.scaleLinear()
-        .domain([yMax + xMin, yMax - xMax])
+        .domain([yMin, yMax])
         .range([h - padding, padding])
 
     // create axes
@@ -51,18 +54,18 @@ function createVisualization() {
     var yAxis = d3.axisLeft(yScale).ticks(5)
 
     // append axes to plot SVG
-    svg.append("g")
+    plotsvg.append("g")
         .attr("class", "axis")
         .attr("transform", "translate(0," + (h - padding) + ")")
         .call(xAxis)
 
-    svg.append("g")
+    plotsvg.append("g")
         .attr("class", "axis")
         .attr("transform", "translate(" + padding + ", 0)")
         .call(yAxis)
 
     // axis labels
-    svg.append("text")
+    plotsvg.append("text")
         .attr("class", "y label")
         .attr("text-anchor", "middle")
         .text("Latent Dimension 2")
@@ -70,7 +73,7 @@ function createVisualization() {
         .attr("font-size", "18")
         .attr("font-family", "'Open Sans', sans-serif")
 
-    svg.append("text")
+    plotsvg.append("text")
         .attr("class", "x label")
         .attr("text-anchor", "middle")
         .text("Latent Dimension 1")
@@ -79,7 +82,7 @@ function createVisualization() {
         .attr("font-family", "'Open Sans', sans-serif")
 
     // Title
-    svg.append("text")
+    plotsvg.append("text")
         .attr("class", "Title")
         .attr("text-anchor", "middle")
         .text("Molecular Embedding")
@@ -88,7 +91,7 @@ function createVisualization() {
         .attr("font-family", "'Open Sans', sans-serif")
 
     // Create circles from molData
-    svg.selectAll("circle")
+    plotsvg.selectAll("circle")
         .data(molData)
         .enter()
         .append("circle")
@@ -122,14 +125,50 @@ function createVisualization() {
                         .style("font-color", "white")
                         .style("background-color", "white")
                         .transition()
-                        .style("opacity", 0.9)
+                        .style("opacity", 0.95)
                 }
             }
         )
         .on("mouseout", function(d) { tooltip.style("visibility", "hidden") })
 
     // image tooltip style attributes
-    var tooltip = d3.select("body")
+    var tooltip = d3.select("#plot")
         .append("div")
         .style("position", "absolute")
+
+    // create legend SVG
+    legenddiv = d3.select("#legend")
+    legenddiv.attr("z-index", 2).style("display", "inline-block")
+    legendsvg = legenddiv.append("svg")
+    legendsvg.attr("width", 100).attr("height", h)
+
+    // make legend dots
+    legendsvg.append("circle")
+        .attr("cx", 6)
+        .attr("cy", h / 2 - 10)
+        .attr("r", 6)
+        .style("fill", "green")
+    
+    legendsvg.append("circle")
+        .attr("cx", 6)
+        .attr("cy", h / 2 + 10)
+        .attr("r", 6)
+        .style("fill", "black")
+
+    // add legend text
+    legendsvg.append("text")
+        .attr("x", 20)
+        .attr("y", h / 2 - 9)
+        .text("bioactive")
+        .style("font-size", "15px")
+        .attr("alignment-baseline","middle")
+        .attr("font-family", "'Open Sans', sans-serif")
+
+    legendsvg.append("text")
+        .attr("x", 20)
+        .attr("y", h / 2 + 11)
+        .text("inactive")
+        .style("font-size", "15px")
+        .attr("alignment-baseline","middle")
+        .attr("font-family", "'Open Sans', sans-serif")
 }
