@@ -9,7 +9,7 @@ serve() do request
     elseif isdir(target)
         target = joinpath(target, "index.html")
     elseif !isfile(target) # look for file
-        return Response(404) # file not found
+        return Response(404, "404.html") # file not found
     end
     # serve response
     try # return byte array of file contents

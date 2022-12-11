@@ -1,0 +1,18 @@
+title: E. Adrian Henle
+email: henlee@oregonstate.edu
+description: Chemical Data Science
+github_username: eahenle
+
+theme: minima
+show_excerpts: true
+
+plugins:
+  - jekyll-feed
+
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - old
+  - README.md
+  - cacert.pem
+  - serve.sh
