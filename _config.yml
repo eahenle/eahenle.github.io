@@ -2,14 +2,11 @@ title: E. Adrian Henle
 email: henlee@oregonstate.edu
 description: Chemical Data Science
 linkedin_username: adrian-henle
+github_username: eahenle
+twitter_username: eahenle
 
 theme: minima
 show_excerpts: true
-
-minima:
-  social_links:
-    - { platform: github,  user_url: "https://github.com/eahenle" }
-    - { platform: twitter, user_url: "https://twitter.com/eahenle" }
 
 plugins:
   - jekyll-feed
