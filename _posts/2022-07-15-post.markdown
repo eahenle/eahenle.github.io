@@ -1,0 +1,13 @@
+---
+layout: post
+title:  "Graph Kernels and SVM to Predict Bee Toxicity"
+date:   2022-07-15 00:00:00 -0800
+---
+
+Honey bees and pesticides are both vital to food security--so how do we ensure that one isn't harmed by the other?
+
+To help address this problem, we used graph kernel transformations and support vector machines to produce a model capable of predicting whether a molecular structure is likely to be acutely toxic to bees.  Read the [paper][paper] at the Journal of Chemical Physics, and check out the code on [GitHub][github]. You can also listen to an interview with my coauthor and me on Oregon State University's [PolliNation podcast][podcast].
+
+[paper]: https://aip.scitation.org/doi/10.1063/5.0090573
+[github]: https://github.com/SimonEnsemble/graph-kernel-SVM-for-toxicity-of-pesticides-to-bees
+[podcast]: https://extension.oregonstate.edu/podcast/pollination-podcast/216-yang-henle-machines-learning-classify-insecticides-toxic-bees
