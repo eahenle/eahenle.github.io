@@ -4,7 +4,7 @@ title:  "Embedding Molecules into a Latent Space"
 date:   2022-12-12 00:00:00 -0800
 ---
 
-As mentioned in my previous post on [predicting bee toxicity][bee-tox], it is often necessary (especially in chemical data science) to convert heterogeneous molecular structures into latent-space representations to allow machine learning methods to identify predictive features.  After publishing the [bee toxicity][bee-tox] paper, a potential collaborator (hi Vasuk!) sent over a data set, asking if we might be able to apply a similar method to extract meaningful structure-activity relationships.
+As mentioned in my previous post on [predicting bee toxicity][bee-tox], it is often necessary to convert heterogeneous molecular structures into latent-space representations to allow machine learning methods to identify predictive features.  After publishing the [bee toxicity][bee-tox] paper, a potential collaborator (hi Vasuk!) sent over a data set, asking if we might be able to apply a similar method to extract meaningful structure-activity relationships.
 
 The data are the interactions of 49 common small molecules present in cannabis--loosely, a selection of cannabinoids and terpenoids--and their interactions with a host of receptor proteins (including cannabinoid receptors, adrenergic receptors, and ion channels):
 
