@@ -1,6 +1,6 @@
 title: E. Adrian Henle
 email: henlee@oregonstate.edu
-description: Chemical Data Science
+description: Data Science for Chemistry and Materials Research and Development
 linkedin_username: adrian-henle
 github_username: eahenle
 
@@ -13,7 +13,6 @@ plugins:
 exclude:
   - Gemfile
   - Gemfile.lock
-  - old
   - README.md
   - cacert.pem
   - serve.sh
