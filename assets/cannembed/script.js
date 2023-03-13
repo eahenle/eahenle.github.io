@@ -9,7 +9,8 @@ d3.csv(
             index : d.index,
             x : +d.x,
             y : +d.y,
-            label : d.active //! note: label is switched (active = 'false')
+            label : d.active, //! note: label is switched (active = 'false')
+            compound_name : d.compound_name
         }
     }, 
     function(error, rows) {
@@ -24,7 +25,8 @@ function createVisualization() {
     var w = 700
     var h = 400
     // axis padding
-    var padding = 75
+    var padding = 0.01
+    var padding2 = 75
     // toolitp image box edge length
     var image_size = 200
 
@@ -41,13 +43,13 @@ function createVisualization() {
     var xMin = d3.min(molData, function(d) { return d.x }) - padding
     var xScale = d3.scaleLinear()
         .domain([xMin, xMax]) 
-        .range([padding, w - padding]) 
+        .range([padding2, w - padding2]) 
 
     var yMax = d3.max(molData, function(d) { return d.y }) + padding
     var yMin = d3.min(molData, function(d) { return d.y }) - padding
     var yScale = d3.scaleLinear()
         .domain([yMin, yMax])
-        .range([h - padding, padding])
+        .range([h - padding2, padding2])
 
     // create axes
     var xAxis = d3.axisBottom(xScale).ticks(5)
@@ -56,12 +58,12 @@ function createVisualization() {
     // append axes to plot SVG
     plotsvg.append("g")
         .attr("class", "axis")
-        .attr("transform", "translate(0," + (h - padding) + ")")
+        .attr("transform", "translate(0," + (h - padding2) + ")")
         .call(xAxis)
 
     plotsvg.append("g")
         .attr("class", "axis")
-        .attr("transform", "translate(" + padding + ", 0)")
+        .attr("transform", "translate(" + padding2 + ", 0)")
         .call(yAxis)
 
     // axis labels
@@ -86,7 +88,7 @@ function createVisualization() {
         .attr("class", "Title")
         .attr("text-anchor", "middle")
         .text("Molecular Embedding")
-        .attr("transform", "translate(" + (w / 2) + ", " + (0.5 * padding) + ")")
+        .attr("transform", "translate(" + (w / 2) + ", " + (0.5 * padding2) + ")")
         .attr("font-size", "24")
         .attr("font-family", "'Open Sans', sans-serif")
 
@@ -108,7 +110,7 @@ function createVisualization() {
             function(d) {
                 var string = 
                     "<img src=img/" + d.index + ".png style='height: " + image_size + 
-                    "px; width: " + image_size + "px'>"
+                    "px; width: " + image_size + "px'> <br>" + d.compound_name
                 return {
                     image : tooltip.html(string)
                         .style(

@@ -28,11 +28,12 @@ gmat = gram_matrix(random_walk, graphs; l=4, normalize=true)
 From here, to convert the data from 49-dimensional space into something a bit more human-accessible, we need to apply a dimensional reduction technique.  There are many to choose from, but for this demo we'll apply [diffusion mapping][diffmap]:
 
 {% highlight julia %}
-# apply diffusion mapping (defaults to 2D output)
-using ManifoldLearning #²
-mapped = transform(fit(DiffMap, gmat; kernel=nothing))
+# apply diffusion mapping to 2 dimensions
+using DiffusionMap #²
+normalize_to_stochastic_matrix!(gmat)
+mapped = diffusion_map(gmat, 2)
 {% endhighlight %}
-² [ManifoldLearning.jl][manifoldlearning] by Art Diky
+² [DiffusionMap.jl][diffusionmap]
 
 Now that everything is transformed into a two-dimensional space, we can check the embedding out visually:
 
@@ -45,4 +46,4 @@ Looks like we do get some separation of the bio-active vs. inactive substances, 
 [porematmod]: /2022/01/14/porematmod.html
 [diffmap]: https://en.wikipedia.org/wiki/Diffusion_map
 [moleculargraph]: https://github.com/mojaie/MolecularGraph.jl
-[manifoldlearning]: https://github.com/wildart/ManifoldLearning.jl
+[diffusionmap]: https://github.com/SimonEnsemble/DiffusionMap.jl
