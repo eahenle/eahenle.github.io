@@ -10,10 +10,10 @@ The data are the interactions of 49 common small molecules present in cannabis--
 
 | Compound Name | Structure | Protein Affinities |
 |---|---|---|
-| Δ-9 Tetrahydrocannabinol | <img src="assets/cannembed/img/1.png"> | PGH Synthase 1, CB-1, CB-2 |
-| Cannabigerol | <img src="assets/cannembed/img/2.png"> | CB-1, CB-2, α-2A, α-2B, 5-HT 1A |
+| Δ-9 Tetrahydrocannabinol | <img src="/assets/cannembed/img/1.png"> | PGH Synthase 1, CB-1, CB-2 |
+| Cannabigerol | <img src="/assets/cannembed/img/2.png"> | CB-1, CB-2, α-2A, α-2B, 5-HT 1A |
 |...|...|...|
-| Cannabidiol-C4 | <img src="assets/cannembed/img/23.png"> | None |
+| Cannabidiol-C4 | <img src="/assets/cannembed/img/23.png"> | None |
 
 As with the [bee toxicity][bee-tox] study, the first step (after cleaning and pre-processing the raw data) has to be taking these molecules--handily provided as SMILES strings--and making pairwise comparisons via a graph kernel.  To do this, I used a piece of software I've been developing: [MolecularGraphKernels.jl][MGK].  The software provides a handy interface for taking molecular structure encodings and applying various graph kernels, plus some useful visualization and other utilities.  This is still in active development (read: the codebase is highly unstable and *will* change frequently in the near future) but I look forward to making a full post on it when we hit our first stable release.
 
