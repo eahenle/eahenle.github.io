@@ -1,6 +1,6 @@
 ---
 # layout: page
-title: Adrian Henle
+title: About Me
 permalink: /about/
 ---
 
