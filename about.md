@@ -14,7 +14,7 @@ I am a data scientist and software developer in cheminformatics, with a particul
 
 [GitHub][github]
 
-[CV]: https://eahenle.github.io/CV.pdf
+[CV]: https://eahenle.github.io/CV_20240701.pdf
 [scholar]: https://scholar.google.com/citations?user=s8a0NmYAAAAJ&hl=en
 [linkedin]: https://linkedin.com/adrian-henle
 [github]: https://github.com/eahenle
