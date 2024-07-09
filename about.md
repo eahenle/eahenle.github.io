@@ -1,19 +1,20 @@
 ---
 # layout: page
-title: About Me
+title: Adrian Henle
 permalink: /about/
 ---
 
-I am a data scientist and software developer researching applications of graph theory in cheminformatics, nanoporous materials discovery, and small molecule property prediction.
+I am a data scientist and software developer in cheminformatics, with a particular interest in the Julia programming language.
 
-![Partial Family Photo][photo]
+[Curriculum Vitae][CV]
 
-Currently, I am a doctoral student with [Cory Simon][simon-ensemble] at Oregon State University.
+[Google Scholar][scholar]
 
-See my publications at [Google Scholar][scholar]
+[LinkedIn][linkedin]
 
-Send me a message on [Gitter][gitter]
+[GitHub][github]
 
-[simon-ensemble]: https://SimonEnsemble.github.io
+[CV]: https://eahenle.github.io/CV.pdf
 [scholar]: https://scholar.google.com/citations?user=s8a0NmYAAAAJ&hl=en
-[gitter]: https://gitter.im/eahenle/community
+[linkedin]: https://linkedin.com/adrian-henle
+[github]: https://github.com/eahenle
