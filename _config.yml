@@ -14,5 +14,6 @@ exclude:
   - Gemfile
   - Gemfile.lock
   - README.md
+  - USER_CUSTOM_INSTRUCTIONS.md
   - cacert.pem
   - serve.sh
