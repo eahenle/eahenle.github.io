@@ -4,7 +4,7 @@ title: About Me
 permalink: /about/
 ---
 
-I am a machine learning engineer at Cisco ThousandEyes, where I build agentic AI platforms and tools for internet and cloud intelligence workflows. My current work focuses on making AI systems reliable, useful, and maintainable in production engineering environments.
+I am E. Adrian Henle, Ph.D., a machine learning engineer at Cisco ThousandEyes, where I build agentic AI platforms and tools for internet and cloud intelligence workflows. My current work focuses on making AI systems reliable, useful, and maintainable in production engineering environments.
 
 Before moving into industry ML engineering, I worked in computational chemistry and materials research, developing open-source tools and applying machine learning to molecular and materials problems. This site now serves as a home for my current engineering work alongside an archive of earlier research projects and posts.
 
