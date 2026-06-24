@@ -33,7 +33,7 @@ That felt too small.
 
 ## The Trick
 
-The core idea behind [`co-proc`](https://github.com/eahenle/co-proc) is that
+The core idea behind [`co-proc`](https://eahenle.github.io/co-proc/) is that
 `p` does not need to remain special forever.
 
 Immediately after starting a native zsh coprocess, `co-proc` duplicates the
