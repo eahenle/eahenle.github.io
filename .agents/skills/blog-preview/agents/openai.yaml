@@ -1,0 +1,4 @@
+interface:
+  display_name: "Blog Preview"
+  short_description: "Build and serve the Jekyll blog preview in Codex."
+  default_prompt: "Preview this blog post as it will appear on the site."

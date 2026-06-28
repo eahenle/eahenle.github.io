@@ -1,0 +1,56 @@
+name: Preview render
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "**/*.html"
+      - "**/*.md"
+      - "**/*.markdown"
+      - "_config.yml"
+      - "_includes/**"
+      - "_layouts/**"
+      - "_posts/**"
+      - "_sass/**"
+      - "assets/**"
+      - "Gemfile"
+      - "Gemfile.lock"
+      - ".github/workflows/preview-render.yml"
+      - ".agents/skills/blog-preview/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preview-render-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  render:
+    name: Build Jekyll preview
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: Build rendered site
+        run: bundle exec jekyll build --trace
+        env:
+          JEKYLL_ENV: production
+
+      - name: Summarize preview check
+        run: |
+          {
+            echo "## Preview render check"
+            echo
+            echo "The Jekyll production render completed successfully for this pull request."
+            echo
+            echo "To view the rendered site with zero artifact handling, ask Codex to use the repo-local \`blog-preview\` skill. The skill builds the current branch and starts a Jekyll server in the Codex app."
+          } >> "$GITHUB_STEP_SUMMARY"
