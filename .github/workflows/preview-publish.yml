@@ -27,6 +27,8 @@ on:
 
 permissions:
   contents: write
+  issues: write
+  pull-requests: read
 
 concurrency:
   group: preview-publish-${{ github.event.pull_request.number || github.ref }}
@@ -105,6 +107,26 @@ jobs:
           git -C "$publish_dir" commit -m "Publish preview ${PREVIEW_PATH}"
           git -C "$publish_dir" push origin HEAD:gh-pages
 
+      - name: Comment with preview link
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIEW_URL: ${{ steps.preview.outputs.url }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          marker="<!-- preview-publish:${PR_NUMBER} -->"
+          printf -v body '%s\n✅ Preview published: %s' "$marker" "$PREVIEW_URL"
+          comment_id="$(gh api "repos/${REPO}/issues/${PR_NUMBER}/comments" --paginate --jq ".[] | select(.body | contains(\"${marker}\")) | .id" | sed -n '1p')"
+
+          if [[ -n "$comment_id" ]]; then
+            gh api --method PATCH "repos/${REPO}/issues/comments/${comment_id}" -f body="$body" >/dev/null
+          else
+            gh api --method POST "repos/${REPO}/issues/${PR_NUMBER}/comments" -f body="$body" >/dev/null
+          fi
+
       - name: Summarize published preview
         run: |
           {
@@ -145,3 +167,17 @@ jobs:
           git -C "$publish_dir" add -A
           git -C "$publish_dir" commit -m "Remove preview ${PREVIEW_PATH}"
           git -C "$publish_dir" push origin HEAD:gh-pages
+
+      - name: Delete preview comment
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          marker="<!-- preview-publish:${PR_NUMBER} -->"
+          gh api "repos/${REPO}/issues/${PR_NUMBER}/comments" --paginate --jq ".[] | select(.body | contains(\"${marker}\")) | .id" | while read -r comment_id; do
+            [[ -z "$comment_id" ]] && continue
+            gh api --method DELETE "repos/${REPO}/issues/comments/${comment_id}" >/dev/null
+          done

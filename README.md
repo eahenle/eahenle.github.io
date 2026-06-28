@@ -4,7 +4,7 @@
 
 Every pull request that changes site content, templates, styles, assets, or the preview workflows runs the **CI render** GitHub Actions workflow. The workflow builds the site with Jekyll in production mode to catch rendering failures before merge.
 
-The separate **Preview publish** workflow builds the same rendered site with a PR-specific `baseurl` and publishes it under `/pr-preview/pr-<number>/` on the `gh-pages` branch for same-repository pull requests. Closed PRs remove their published preview directory.
+The separate **Preview publish** workflow builds the same rendered site with a PR-specific `baseurl`, publishes it under `/pr-preview/pr-<number>/` on the `gh-pages` branch for same-repository pull requests, and posts the preview link as a PR comment. Closed PRs remove both their published preview directory and preview comment.
 
 To preview from Codex instead, ask Codex to use the repo-local `blog-preview` skill. The skill builds this branch, starts the Jekyll preview server inside Codex, and gives you a preview URL without requiring you to download artifacts, unpack archives, or run a local server manually.
 
