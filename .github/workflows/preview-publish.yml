@@ -1,0 +1,147 @@
+name: Preview publish
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, closed]
+    paths:
+      - "**/*.html"
+      - "**/*.md"
+      - "**/*.markdown"
+      - "_config.yml"
+      - "_includes/**"
+      - "_layouts/**"
+      - "_posts/**"
+      - "_sass/**"
+      - "assets/**"
+      - "Gemfile"
+      - "Gemfile.lock"
+      - ".github/workflows/preview-render.yml"
+      - ".github/workflows/preview-publish.yml"
+      - ".agents/skills/blog-preview/**"
+  workflow_dispatch:
+    inputs:
+      preview_name:
+        description: "Preview directory name under /pr-preview/ for manual publishes"
+        required: false
+        default: "manual"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: preview-publish-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    name: Publish PR preview
+    if: github.event_name == 'workflow_dispatch' || (github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: Compute preview path
+        id: preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            preview_name="pr-${{ github.event.pull_request.number }}"
+          else
+            preview_name="${{ inputs.preview_name }}"
+          fi
+          preview_name="${preview_name//[^A-Za-z0-9._-]/-}"
+          preview_path="pr-preview/${preview_name}"
+          preview_url="https://${{ github.repository_owner }}.github.io/${preview_path}/"
+          {
+            echo "name=${preview_name}"
+            echo "path=${preview_path}"
+            echo "url=${preview_url}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build preview site
+        run: bundle exec jekyll build --trace --baseurl "/${{ steps.preview.outputs.path }}"
+        env:
+          JEKYLL_ENV: production
+
+      - name: Publish preview to gh-pages
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PREVIEW_PATH: ${{ steps.preview.outputs.path }}
+        run: |
+          set -euo pipefail
+          publish_dir="${RUNNER_TEMP}/preview-pages"
+          remote_url="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+
+          if git ls-remote --exit-code --heads "$remote_url" gh-pages >/dev/null 2>&1; then
+            git clone --single-branch --branch gh-pages "$remote_url" "$publish_dir"
+          else
+            git init "$publish_dir"
+            git -C "$publish_dir" checkout -b gh-pages
+            git -C "$publish_dir" remote add origin "$remote_url"
+          fi
+
+          mkdir -p "$publish_dir/$PREVIEW_PATH"
+          rm -rf "$publish_dir/$PREVIEW_PATH"
+          mkdir -p "$publish_dir/$PREVIEW_PATH"
+          cp -a _site/. "$publish_dir/$PREVIEW_PATH/"
+          touch "$publish_dir/.nojekyll"
+
+          git -C "$publish_dir" config user.name "github-actions[bot]"
+          git -C "$publish_dir" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C "$publish_dir" add .
+          if git -C "$publish_dir" diff --cached --quiet; then
+            echo "No preview changes to publish."
+            exit 0
+          fi
+          git -C "$publish_dir" commit -m "Publish preview ${PREVIEW_PATH}"
+          git -C "$publish_dir" push origin HEAD:gh-pages
+
+      - name: Summarize published preview
+        run: |
+          {
+            echo "## Published preview"
+            echo
+            echo "${{ steps.preview.outputs.url }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  cleanup:
+    name: Remove closed PR preview
+    if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove preview from gh-pages
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PREVIEW_PATH: pr-preview/pr-${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          publish_dir="${RUNNER_TEMP}/preview-pages"
+          remote_url="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+
+          if ! git ls-remote --exit-code --heads "$remote_url" gh-pages >/dev/null 2>&1; then
+            echo "No gh-pages branch exists; nothing to clean up."
+            exit 0
+          fi
+
+          git clone --single-branch --branch gh-pages "$remote_url" "$publish_dir"
+          if [[ ! -d "$publish_dir/$PREVIEW_PATH" ]]; then
+            echo "No preview directory exists at $PREVIEW_PATH; nothing to clean up."
+            exit 0
+          fi
+
+          rm -rf "$publish_dir/$PREVIEW_PATH"
+          git -C "$publish_dir" config user.name "github-actions[bot]"
+          git -C "$publish_dir" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C "$publish_dir" add -A
+          git -C "$publish_dir" commit -m "Remove preview ${PREVIEW_PATH}"
+          git -C "$publish_dir" push origin HEAD:gh-pages
