@@ -9,3 +9,5 @@ To read posts as they will appear before merging, ask Codex to use the repo-loca
 Example prompt:
 
 > Use the blog-preview skill to show me this PR's rendered site.
+
+Codex will run `.agents/skills/blog-preview/scripts/preview.sh`, keep the Jekyll server alive in the session, and report the forwarded preview URL.
