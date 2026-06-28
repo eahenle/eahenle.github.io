@@ -3,6 +3,7 @@ email: adrian@henletech.net
 description: Machine Learning Engineering for Agentic AI Platforms and Internet Intelligence
 linkedin_username: adrian-henle
 github_username: eahenle
+repository: eahenle/eahenle.github.io
 
 theme: minima
 show_excerpts: true
@@ -13,6 +14,8 @@ plugins:
 exclude:
   - Gemfile
   - Gemfile.lock
+  - vendor
+  - .bundle
   - README.md
   - USER_CUSTOM_INSTRUCTIONS.md
   - cacert.pem
