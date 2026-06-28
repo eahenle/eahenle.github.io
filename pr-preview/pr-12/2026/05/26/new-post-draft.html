@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>The Cloud Is Not the Final Form of AI | E. Adrian Henle</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="The Cloud Is Not the Final Form of AI" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="The AI boom began in the cloud for good reasons: model training required hyperscale infrastructure, GPU supply was constrained, and centralized deployment let teams iterate fast. But those conditions describe the start of the cycle, not its end state." />
+<meta property="og:description" content="The AI boom began in the cloud for good reasons: model training required hyperscale infrastructure, GPU supply was constrained, and centralized deployment let teams iterate fast. But those conditions describe the start of the cycle, not its end state." />
+<link rel="canonical" href="https://github.com/pr-preview/pr-12/2026/05/26/new-post-draft.html" />
+<meta property="og:url" content="https://github.com/pr-preview/pr-12/2026/05/26/new-post-draft.html" />
+<meta property="og:site_name" content="E. Adrian Henle" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2026-05-26T16:00:00+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="The Cloud Is Not the Final Form of AI" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2026-05-26T16:00:00+00:00","datePublished":"2026-05-26T16:00:00+00:00","description":"The AI boom began in the cloud for good reasons: model training required hyperscale infrastructure, GPU supply was constrained, and centralized deployment let teams iterate fast. But those conditions describe the start of the cycle, not its end state.","headline":"The Cloud Is Not the Final Form of AI","mainEntityOfPage":{"@type":"WebPage","@id":"https://github.com/pr-preview/pr-12/2026/05/26/new-post-draft.html"},"url":"https://github.com/pr-preview/pr-12/2026/05/26/new-post-draft.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/pr-preview/pr-12/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://github.com/pr-preview/pr-12/feed.xml" title="E. Adrian Henle" /></head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/pr-preview/pr-12/">E. Adrian Henle</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/pr-preview/pr-12/about/">About Me</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">The Cloud Is Not the Final Form of AI</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2026-05-26T16:00:00+00:00" itemprop="datePublished">May 26, 2026
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>The AI boom began in the cloud for good reasons: model training required hyperscale infrastructure, GPU supply was constrained, and centralized deployment let teams iterate fast. But those conditions describe the <em>start</em> of the cycle, not its end state.</p>
+
+<p>As inference becomes continuous, personalized, and embedded in daily tools, a different pressure gradient is emerging. Latency, privacy, reliability, energy costs, and bandwidth all favor moving more intelligence closer to the user. We may be living through a temporary return to a mainframe-like model before the pendulum swings back toward distributed personal computing.</p>
+
+<h2 id="the-industry-accidentally-rebuilt-mainframes">The Industry Accidentally Rebuilt Mainframes</h2>
+
+<p>For a moment, AI made old architecture patterns feel new again:</p>
+
+<ul>
+  <li>Thin clients</li>
+  <li>Remote compute</li>
+  <li>Metered access</li>
+  <li>Centralized ownership</li>
+  <li>Dependency on network availability</li>
+</ul>
+
+<p>We spent 40 years decentralizing computing, then rebuilt the terminal model because GPUs were scarce.</p>
+
+<h2 id="why-the-cloud-won-initially">Why the Cloud Won Initially</h2>
+
+<p>The current centralized phase is not a mistake; it was rational:</p>
+
+<ul>
+  <li>Frontier training runs are massive batch workloads that benefit from concentrated infrastructure.</li>
+  <li>Centralized serving simplified safety, versioning, observability, and rapid deployment.</li>
+  <li>GPU scarcity rewarded aggregation in datacenters where utilization could be optimized.</li>
+  <li>Consumer devices simply could not run the largest models in practical time and power budgets.</li>
+</ul>
+
+<p>Cloud-first AI was the shortest path to capability.</p>
+
+<h2 id="training-and-inference-are-different-economic-problems">Training and Inference Are Different Economic Problems</h2>
+
+<p>Training and inference have very different operational profiles.</p>
+
+<p>Training is generally:</p>
+
+<ul>
+  <li>Huge, infrequent, batch-heavy</li>
+  <li>Capital intensive</li>
+  <li>Well matched to hyperscale clusters</li>
+</ul>
+
+<p>Inference is increasingly:</p>
+
+<ul>
+  <li>Continuous and globally distributed</li>
+  <li>Latency-sensitive</li>
+  <li>Personalization-heavy</li>
+  <li>Integrated with local context and local peripherals</li>
+</ul>
+
+<p>Training wants concentration. Inference increasingly wants locality.</p>
+
+<h2 id="the-pressure-toward-the-edge">The Pressure Toward the Edge</h2>
+
+<p>As assistants become always-on and multimodal, local execution becomes less of a novelty and more of a systems requirement.</p>
+
+<p>Key forces pushing compute outward include:</p>
+
+<ul>
+  <li><strong>Latency:</strong> immediate interaction matters for voice, vision, and control loops.</li>
+  <li><strong>Privacy:</strong> some data should never leave a device, home, vehicle, or enterprise boundary.</li>
+  <li><strong>Offline reliability:</strong> useful systems should degrade gracefully when networks do not cooperate.</li>
+  <li><strong>Personalization:</strong> local memory and habits are easier to maintain when state lives near the user.</li>
+  <li><strong>Bandwidth and egress costs:</strong> shipping every token and sensor stream to the cloud scales poorly.</li>
+  <li><strong>Resilience:</strong> distributed execution avoids single points of failure.</li>
+</ul>
+
+<p>This does not require a single form factor. The edge can mean phones, laptops, home labs, cars, wearables, and local orchestration nodes that route tasks by cost, latency, and sensitivity.</p>
+
+<h2 id="the-quiet-killer-energy-economics">The Quiet Killer: Energy Economics</h2>
+
+<p>Training models is expensive. Running civilization through them continuously may be worse.</p>
+
+<p>At planetary inference scale, costs include not only compute but also cooling, transmission, and utilization inefficiencies from centralized overprovisioning. Local silicon changes the equation by reducing round trips and allowing more work to be done near where data is generated.</p>
+
+<p>The economic argument for edge inference is not ideological. It is thermodynamic.</p>
+
+<h2 id="hybrid-ai-is-the-likely-steady-state">Hybrid AI Is the Likely Steady State</h2>
+
+<p>The realistic endgame is probably hybrid rather than absolute:</p>
+
+<ul>
+  <li>A <strong>local fast path</strong> for responsiveness, privacy, and routine tasks</li>
+  <li>A <strong>cloud escalation path</strong> for frontier reasoning and heavy jobs</li>
+  <li><strong>Asynchronous delegation</strong> across devices and services</li>
+  <li><strong>Local memory with cloud cognition</strong> when broader context is required</li>
+</ul>
+
+<p>Not everything local. Not everything cloud.</p>
+
+<h2 id="closing">Closing</h2>
+
+<p>The future AI assistant may feel personal not because it imitates humanity better, but because more of its cognition physically lives beside you.</p>
+
+  </div><a class="u-url" href="/pr-preview/pr-12/2026/05/26/new-post-draft.html" hidden></a>
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/pr-preview/pr-12/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">E. Adrian Henle</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">E. Adrian Henle</li><li><a class="u-email" href="mailto:adrian@henletech.net">adrian@henletech.net</a></li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/eahenle"><svg class="svg-icon"><use xlink:href="/pr-preview/pr-12/assets/minima-social-icons.svg#github"></use></svg> <span class="username">eahenle</span></a></li><li><a href="https://www.linkedin.com/in/adrian-henle"><svg class="svg-icon"><use xlink:href="/pr-preview/pr-12/assets/minima-social-icons.svg#linkedin"></use></svg> <span class="username">adrian-henle</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>Machine Learning Engineering for Agentic AI Platforms and Internet Intelligence</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

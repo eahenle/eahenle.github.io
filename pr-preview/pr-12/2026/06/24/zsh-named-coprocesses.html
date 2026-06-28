@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>zsh Only Supports One Coprocess? No. That Will Not Do. | E. Adrian Henle</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="zsh Only Supports One Coprocess? No. That Will Not Do." />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="A technical note on co-proc, a small zsh layer that turns native coprocesses into named, simultaneous shell services without replacing zsh’s native coproc syntax." />
+<meta property="og:description" content="A technical note on co-proc, a small zsh layer that turns native coprocesses into named, simultaneous shell services without replacing zsh’s native coproc syntax." />
+<link rel="canonical" href="https://github.com/pr-preview/pr-12/2026/06/24/zsh-named-coprocesses.html" />
+<meta property="og:url" content="https://github.com/pr-preview/pr-12/2026/06/24/zsh-named-coprocesses.html" />
+<meta property="og:site_name" content="E. Adrian Henle" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2026-06-24T16:00:00+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="zsh Only Supports One Coprocess? No. That Will Not Do." />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2026-06-24T16:00:00+00:00","datePublished":"2026-06-24T16:00:00+00:00","description":"A technical note on co-proc, a small zsh layer that turns native coprocesses into named, simultaneous shell services without replacing zsh’s native coproc syntax.","headline":"zsh Only Supports One Coprocess? No. That Will Not Do.","mainEntityOfPage":{"@type":"WebPage","@id":"https://github.com/pr-preview/pr-12/2026/06/24/zsh-named-coprocesses.html"},"url":"https://github.com/pr-preview/pr-12/2026/06/24/zsh-named-coprocesses.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/pr-preview/pr-12/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://github.com/pr-preview/pr-12/feed.xml" title="E. Adrian Henle" /></head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/pr-preview/pr-12/">E. Adrian Henle</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/pr-preview/pr-12/about/">About Me</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">zsh Only Supports One Coprocess? No. That Will Not Do.</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2026-06-24T16:00:00+00:00" itemprop="datePublished">Jun 24, 2026
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>zsh has a useful feature hiding in plain sight: <code class="language-plaintext highlighter-rouge">coproc</code>.</p>
+
+<p>A coprocess is just a process connected to the shell by pipes in both directions.
+The shell can write to the process’s stdin and read from its stdout. That makes
+it a natural fit for calculators, interpreters, protocol adapters, local test
+services, and anything else that should stay warm while a shell script talks to
+it.</p>
+
+<p>The strange part is not that zsh has coprocesses.</p>
+
+<p>The strange part is that zsh exposes only one active coprocess through the
+special <code class="language-plaintext highlighter-rouge">p</code> redirection target.</p>
+
+<div class="language-zsh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>coproc bc <span class="nt">-l</span>
+print <span class="nt">-r</span> <span class="nt">--</span> <span class="s1">'2 ^ 10'</span> <span class="o">&gt;</span>&amp;p
+<span class="nb">read</span> <span class="nt">-r</span> answer &lt;&amp;p
+</code></pre></div></div>
+
+<p>That works. But if you start another coprocess, <code class="language-plaintext highlighter-rouge">p</code> moves. The old process may
+still exist, the operating system is perfectly capable of handling more pipes,
+and nothing fundamental has run out. The shell abstraction simply stopped at
+“the current coprocess.”</p>
+
+<p>That felt too small.</p>
+
+<h2 id="the-trick">The Trick</h2>
+
+<p>The core idea behind <a href="https://eahenle.github.io/co-proc/"><code class="language-plaintext highlighter-rouge">co-proc</code></a> is that
+<code class="language-plaintext highlighter-rouge">p</code> does not need to remain special forever.</p>
+
+<p>Immediately after starting a native zsh coprocess, <code class="language-plaintext highlighter-rouge">co-proc</code> duplicates the
+current <code class="language-plaintext highlighter-rouge">p</code> descriptors into ordinary numbered file descriptors:</p>
+
+<div class="language-zsh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>coproc COMMAND
+<span class="nb">exec</span> <span class="o">{</span>outfd<span class="o">}</span>&lt;&amp;p
+<span class="nb">exec</span> <span class="o">{</span>infd<span class="o">}&gt;</span>&amp;p
+</code></pre></div></div>
+
+<p>Those numbered descriptors remain usable even after zsh retargets <code class="language-plaintext highlighter-rouge">p</code> for a
+later coprocess.</p>
+
+<p>Once you have that, the rest is bookkeeping:</p>
+
+<ul>
+  <li>store <code class="language-plaintext highlighter-rouge">outfd</code>, <code class="language-plaintext highlighter-rouge">infd</code>, and the child process id,</li>
+  <li>key them by a user-provided name,</li>
+  <li>provide commands to send, read, list, switch, stop, wait, and prune,</li>
+  <li>and clean everything up when the shell exits.</li>
+</ul>
+
+<p>The result is a small sourceable zsh layer for named, simultaneous
+coprocesses.</p>
+
+<div class="language-zsh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">source</span> ./co-proc.zsh
+
+co-proc start calc bc <span class="nt">-l</span>
+co-proc start <span class="nb">echo cat
+
+</span>co-proc send calc <span class="s1">'2 ^ 16'</span>
+co-proc send <span class="nb">echo</span> <span class="s1">'hello'</span>
+
+co-proc <span class="nb">read</span> <span class="nt">-t</span> 1 calc
+co-proc <span class="nb">read</span> <span class="nt">-t</span> 1 <span class="nb">echo
+
+</span>co-proc stop calc
+co-proc stop <span class="nb">echo</span>
+</code></pre></div></div>
+
+<p>This is not a new process model. It is native zsh plus descriptor ownership.</p>
+
+<h2 id="why-not-replace-coproc">Why Not Replace <code class="language-plaintext highlighter-rouge">coproc</code>?</h2>
+
+<p>The tempting design was to make a shell function named <code class="language-plaintext highlighter-rouge">coproc</code> and extend the
+syntax directly:</p>
+
+<div class="language-zsh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>coproc calc bc <span class="nt">-l</span>
+coproc send calc <span class="s1">'2 ^ 10'</span>
+coproc <span class="nb">read </span>calc
+</code></pre></div></div>
+
+<p>But <code class="language-plaintext highlighter-rouge">coproc</code> is not an ordinary command in zsh. It is parsed as a reserved word.
+That matters because native forms like these are grammar, not function calls:</p>
+
+<div class="language-zsh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>coproc bc
+coproc <span class="o">{</span> <span class="nb">cat</span> <span class="o">}</span>
+coproc <span class="k">while </span><span class="nb">read</span> <span class="nt">-r</span> line<span class="p">;</span> <span class="k">do </span>print <span class="nt">-r</span> <span class="nt">--</span> <span class="s2">"</span><span class="nv">$line</span><span class="s2">"</span><span class="p">;</span> <span class="k">done</span>
+</code></pre></div></div>
+
+<p>If <code class="language-plaintext highlighter-rouge">co-proc</code> replaced <code class="language-plaintext highlighter-rouge">coproc</code>, it would break exactly the native syntax it was
+trying to build on. That was the wrong trade.</p>
+
+<p>So the project splits the interface in two:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">co-proc ...</code> is the explicit, scriptable API.</li>
+  <li><code class="language-plaintext highlighter-rouge">coproc ...</code> remains native zsh.</li>
+  <li>Interactive users can opt into a conservative ZLE rewrite for simple extended
+forms.</li>
+</ul>
+
+<p>With the optional interactive layer enabled:</p>
+
+<div class="language-zsh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>co-proc enable-zle
+
+coproc calc bc <span class="nt">-l</span>
+coproc send calc <span class="s1">'2 ^ 10'</span>
+coproc <span class="nb">read </span>calc
+</code></pre></div></div>
+
+<p>The rewrite intentionally avoids complex shell syntax. Lines with redirections,
+pipes, separators, grouped commands, or control words are left alone. Native
+zsh remains native.</p>
+
+<p>That constraint is the point. Compatibility is a feature.</p>
+
+<h2 id="where-it-helps">Where It Helps</h2>
+
+<p>Named coprocesses are most useful when startup cost, state, or protocol context
+matters.</p>
+
+<p>For a tiny example, <code class="language-plaintext highlighter-rouge">bc -l</code> becomes a persistent calculator:</p>
+
+<div class="language-zsh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>co-proc start calc bc <span class="nt">-l</span>
+
+co-proc send calc <span class="s1">'scale=4; 22 / 7'</span>
+co-proc <span class="nb">read</span> <span class="nt">-t</span> 1 calc
+
+co-proc stop calc
+</code></pre></div></div>
+
+<p>A Python snippet can become a small line-oriented service:</p>
+
+<div class="language-zsh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>co-proc start upper python3 <span class="nt">-u</span> <span class="nt">-c</span> <span class="s1">'
+import sys
+
+for line in sys.stdin:
+    print(line.rstrip().upper(), flush=True)
+'</span>
+
+co-proc send upper <span class="s1">'hello'</span>
+co-proc <span class="nb">read</span> <span class="nt">-t</span> 1 upper
+co-proc stop upper
+</code></pre></div></div>
+
+<p>The same pattern works for database shells, local protocol adapters, model or
+agent servers, and test fixtures. Start the thing once, keep it alive, and talk
+to it by name.</p>
+
+<p>For structured protocols, the right move is usually to wrap <code class="language-plaintext highlighter-rouge">co-proc send</code> and
+<code class="language-plaintext highlighter-rouge">co-proc read</code> in small domain-specific helper functions so callers do not have
+to think about raw line ordering.</p>
+
+<h2 id="what-i-like-about-this-solution">What I Like About This Solution</h2>
+
+<p>The satisfying part of <code class="language-plaintext highlighter-rouge">co-proc</code> is that it does not require zsh to grow a new
+primitive.</p>
+
+<p>The primitive was already there.</p>
+
+<p>The missing piece was ownership. zsh owns one moving <code class="language-plaintext highlighter-rouge">p</code> handle. <code class="language-plaintext highlighter-rouge">co-proc</code>
+captures the underlying descriptors before they move, gives them names, and
+tracks their lifecycle.</p>
+
+<p>That makes the feature feel larger without making the shell less itself.</p>
+
+<p>There is a broader lesson here that shows up often in systems work: sometimes a
+feature is not missing because it is impossible. Sometimes the available
+abstraction stopped one layer too early.</p>
+
+  </div><a class="u-url" href="/pr-preview/pr-12/2026/06/24/zsh-named-coprocesses.html" hidden></a>
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/pr-preview/pr-12/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">E. Adrian Henle</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">E. Adrian Henle</li><li><a class="u-email" href="mailto:adrian@henletech.net">adrian@henletech.net</a></li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/eahenle"><svg class="svg-icon"><use xlink:href="/pr-preview/pr-12/assets/minima-social-icons.svg#github"></use></svg> <span class="username">eahenle</span></a></li><li><a href="https://www.linkedin.com/in/adrian-henle"><svg class="svg-icon"><use xlink:href="/pr-preview/pr-12/assets/minima-social-icons.svg#linkedin"></use></svg> <span class="username">adrian-henle</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>Machine Learning Engineering for Agentic AI Platforms and Internet Intelligence</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>
