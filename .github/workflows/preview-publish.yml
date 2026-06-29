@@ -76,9 +76,47 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Build preview site
-        run: bundle exec jekyll build --trace --baseurl "/${{ steps.preview.outputs.path }}"
+        run: bundle exec jekyll build --trace --baseurl "/${{ steps.preview.outputs.path }}" --url "https://${{ github.repository_owner }}.github.io"
         env:
           JEKYLL_ENV: production
+          PAGES_REPO_NWO: ${{ github.repository }}
+
+      - name: Choose preview link
+        id: preview_link
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIEW_ROOT: ${{ steps.preview.outputs.url }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          preview_url="$PREVIEW_ROOT"
+          preview_label="site root"
+
+          if [[ -n "${PR_NUMBER}" ]]; then
+            post_path="$(gh api "repos/${REPO}/pulls/${PR_NUMBER}/files" --paginate \
+              --jq '.[] | select(.filename | test("^_posts/[0-9]{4}-[0-9]{2}-[0-9]{2}-.+\\.(md|markdown|html)$")) | .filename' \
+              | sed -n '1p')"
+
+            if [[ "$post_path" =~ ^_posts/([0-9]{4})-([0-9]{2})-([0-9]{2})-(.+)\.(md|markdown|html)$ ]]; then
+              preview_url="${PREVIEW_ROOT}${BASH_REMATCH[1]}/${BASH_REMATCH[2]}/${BASH_REMATCH[3]}/${BASH_REMATCH[4]}.html"
+              preview_label="post"
+            fi
+          fi
+
+          if [[ "$preview_label" == "site root" ]]; then
+            post_path="$(git ls-files '_posts/*' | sort -r | sed -n '1p')"
+            if [[ "$post_path" =~ ^_posts/([0-9]{4})-([0-9]{2})-([0-9]{2})-(.+)\.(md|markdown|html)$ ]]; then
+              preview_url="${PREVIEW_ROOT}${BASH_REMATCH[1]}/${BASH_REMATCH[2]}/${BASH_REMATCH[3]}/${BASH_REMATCH[4]}.html"
+              preview_label="latest post"
+            fi
+          fi
+
+          {
+            echo "url=${preview_url}"
+            echo "label=${preview_label}"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Read Pages source
         id: pages
@@ -146,13 +184,21 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          PREVIEW_URL: ${{ steps.preview.outputs.url }}
+          PREVIEW_LABEL: ${{ steps.preview_link.outputs.label }}
+          PREVIEW_ROOT: ${{ steps.preview.outputs.url }}
+          PREVIEW_URL: ${{ steps.preview_link.outputs.url }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
           marker="<!-- preview-publish:${PR_NUMBER} -->"
-          printf -v body '%s\n✅ Preview published: %s' "$marker" "$PREVIEW_URL"
+          if [[ "$PREVIEW_LABEL" == "post" ]]; then
+            printf -v body '%s\n✅ Post preview: %s\n\nSite preview: %s' "$marker" "$PREVIEW_URL" "$PREVIEW_ROOT"
+          elif [[ "$PREVIEW_LABEL" == "latest post" ]]; then
+            printf -v body '%s\n✅ Latest post preview: %s\n\nSite preview: %s' "$marker" "$PREVIEW_URL" "$PREVIEW_ROOT"
+          else
+            printf -v body '%s\n✅ Preview published: %s' "$marker" "$PREVIEW_URL"
+          fi
           comment_id="$(gh api "repos/${REPO}/issues/${PR_NUMBER}/comments" --paginate --jq ".[] | select(.body | contains(\"${marker}\")) | .id" | sed -n '1p')"
 
           if [[ -n "$comment_id" ]]; then
@@ -166,7 +212,7 @@ jobs:
           {
             echo "## Published preview"
             echo
-            echo "${{ steps.preview.outputs.url }}"
+            echo "${{ steps.preview_link.outputs.url }}"
           } >> "$GITHUB_STEP_SUMMARY"
 
   cleanup:
