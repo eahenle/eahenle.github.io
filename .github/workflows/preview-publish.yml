@@ -1,7 +1,7 @@
 name: Preview publish
 
 on:
-  pull_request:
+  pull_request_target:
     types: [opened, synchronize, reopened, ready_for_review, closed]
     paths:
       - "**/*.html"
@@ -40,7 +40,14 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || (github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     steps:
+      - name: Check out PR source
+        if: github.event_name == 'pull_request_target'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
       - name: Check out source
+        if: github.event_name == 'workflow_dispatch'
         uses: actions/checkout@v4
 
       - name: Set up Ruby
@@ -54,7 +61,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          if [[ "${{ github.event_name }}" == "pull_request_target" ]]; then
             preview_name="pr-${{ github.event.pull_request.number }}"
           else
             preview_name="${{ inputs.preview_name }}"
@@ -108,7 +115,7 @@ jobs:
           git -C "$publish_dir" push origin HEAD:gh-pages
 
       - name: Comment with preview link
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request_target'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -137,7 +144,7 @@ jobs:
 
   cleanup:
     name: Remove closed PR preview
-    if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name == 'pull_request_target' && github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
       - name: Remove preview from gh-pages
