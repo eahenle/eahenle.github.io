@@ -1,0 +1,296 @@
+name: Preview publish
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, closed]
+    paths:
+      - "**/*.html"
+      - "**/*.md"
+      - "**/*.markdown"
+      - "_config.yml"
+      - "_includes/**"
+      - "_layouts/**"
+      - "_posts/**"
+      - "_sass/**"
+      - "assets/**"
+      - "Gemfile"
+      - "Gemfile.lock"
+      - ".github/workflows/preview-render.yml"
+      - ".github/workflows/preview-publish.yml"
+      - ".agents/skills/blog-preview/**"
+  workflow_dispatch:
+    inputs:
+      preview_name:
+        description: "Preview directory name under /pr-preview/ for manual publishes"
+        required: false
+        default: "manual"
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: preview-publish-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    name: Publish PR preview
+    if: github.event_name == 'workflow_dispatch' || (github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out PR source
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Check out source
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: Compute preview path
+        id: preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            preview_name="pr-${{ github.event.pull_request.number }}"
+          else
+            preview_name="${{ inputs.preview_name }}"
+          fi
+          preview_name="${preview_name//[^A-Za-z0-9._-]/-}"
+          preview_path="pr-preview/${preview_name}"
+          preview_url="https://${{ github.repository_owner }}.github.io/${preview_path}/"
+          {
+            echo "name=${preview_name}"
+            echo "path=${preview_path}"
+            echo "url=${preview_url}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build preview site
+        run: |
+          preview_config="${RUNNER_TEMP}/preview-config.yml"
+          printf 'url: "https://${{ github.repository_owner }}.github.io"\n' > "$preview_config"
+          bundle exec jekyll build --trace --config "_config.yml,${preview_config}" --baseurl "/${{ steps.preview.outputs.path }}"
+        env:
+          JEKYLL_ENV: production
+          PAGES_REPO_NWO: ${{ github.repository }}
+
+      - name: Choose preview link
+        id: preview_link
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIEW_ROOT: ${{ steps.preview.outputs.url }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          preview_url="$PREVIEW_ROOT"
+          preview_label="site root"
+
+          if [[ -n "${PR_NUMBER}" ]]; then
+            post_path="$(gh api "repos/${REPO}/pulls/${PR_NUMBER}/files" --paginate \
+              --jq '.[] | select(.filename | test("^_posts/[0-9]{4}-[0-9]{2}-[0-9]{2}-.+\\.(md|markdown|html)$")) | .filename' \
+              | sed -n '1p')"
+
+            if [[ "$post_path" =~ ^_posts/([0-9]{4})-([0-9]{2})-([0-9]{2})-(.+)\.(md|markdown|html)$ ]]; then
+              preview_url="${PREVIEW_ROOT}${BASH_REMATCH[1]}/${BASH_REMATCH[2]}/${BASH_REMATCH[3]}/${BASH_REMATCH[4]}.html"
+              preview_label="post"
+            fi
+          fi
+
+          if [[ "$preview_label" == "site root" ]]; then
+            post_path="$(git ls-files '_posts/*' | sort -r | sed -n '1p')"
+            if [[ "$post_path" =~ ^_posts/([0-9]{4})-([0-9]{2})-([0-9]{2})-(.+)\.(md|markdown|html)$ ]]; then
+              preview_url="${PREVIEW_ROOT}${BASH_REMATCH[1]}/${BASH_REMATCH[2]}/${BASH_REMATCH[3]}/${BASH_REMATCH[4]}.html"
+              preview_label="latest post"
+            fi
+          fi
+
+          {
+            echo "url=${preview_url}"
+            echo "label=${preview_label}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Read Pages source
+        id: pages
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          branch="$(gh api "repos/${REPO}/pages" --jq '.source.branch // empty' 2>/dev/null || true)"
+          path="$(gh api "repos/${REPO}/pages" --jq '.source.path // "/"' 2>/dev/null || true)"
+          branch="${branch:-main}"
+          path="${path:-/}"
+          path="${path#/}"
+          path="${path%/}"
+          {
+            echo "branch=${branch}"
+            echo "path=${path}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Publish preview to Pages source branch
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PAGES_BRANCH: ${{ steps.pages.outputs.branch }}
+          PAGES_PATH: ${{ steps.pages.outputs.path }}
+          PREVIEW_PATH: ${{ steps.preview.outputs.path }}
+        run: |
+          set -euo pipefail
+          publish_dir="${RUNNER_TEMP}/preview-pages"
+          remote_url="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+
+          if ! git ls-remote --exit-code --heads "$remote_url" "$PAGES_BRANCH" >/dev/null 2>&1; then
+            echo "Pages source branch '${PAGES_BRANCH}' does not exist." >&2
+            exit 1
+          fi
+
+          git clone --single-branch --branch "$PAGES_BRANCH" "$remote_url" "$publish_dir"
+
+          publish_root="$publish_dir"
+          tracked_path="$PREVIEW_PATH"
+          if [[ -n "$PAGES_PATH" ]]; then
+            publish_root="$publish_dir/$PAGES_PATH"
+            tracked_path="$PAGES_PATH/$PREVIEW_PATH"
+            mkdir -p "$publish_root"
+          fi
+
+          rm -rf "$publish_root/$PREVIEW_PATH"
+          mkdir -p "$publish_root/$PREVIEW_PATH"
+          cp -a _site/. "$publish_root/$PREVIEW_PATH/"
+
+          git -C "$publish_dir" config user.name "github-actions[bot]"
+          git -C "$publish_dir" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C "$publish_dir" add "$tracked_path"
+          if git -C "$publish_dir" diff --cached --quiet; then
+            echo "No preview changes to publish."
+            exit 0
+          fi
+          git -C "$publish_dir" commit -m "Publish preview ${PREVIEW_PATH}"
+          git -C "$publish_dir" pull --rebase origin "$PAGES_BRANCH"
+          git -C "$publish_dir" push origin "HEAD:${PAGES_BRANCH}"
+
+      - name: Comment with preview link
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIEW_LABEL: ${{ steps.preview_link.outputs.label }}
+          PREVIEW_ROOT: ${{ steps.preview.outputs.url }}
+          PREVIEW_URL: ${{ steps.preview_link.outputs.url }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          marker="<!-- preview-publish:${PR_NUMBER} -->"
+          if [[ "$PREVIEW_LABEL" == "post" ]]; then
+            printf -v body '%s\n✅ Post preview: %s\n\nSite preview: %s' "$marker" "$PREVIEW_URL" "$PREVIEW_ROOT"
+          elif [[ "$PREVIEW_LABEL" == "latest post" ]]; then
+            printf -v body '%s\n✅ Latest post preview: %s\n\nSite preview: %s' "$marker" "$PREVIEW_URL" "$PREVIEW_ROOT"
+          else
+            printf -v body '%s\n✅ Preview published: %s' "$marker" "$PREVIEW_URL"
+          fi
+          comment_id="$(gh api "repos/${REPO}/issues/${PR_NUMBER}/comments" --paginate --jq ".[] | select(.body | contains(\"${marker}\")) | .id" | sed -n '1p')"
+
+          if [[ -n "$comment_id" ]]; then
+            gh api --method PATCH "repos/${REPO}/issues/comments/${comment_id}" -f body="$body" >/dev/null
+          else
+            gh api --method POST "repos/${REPO}/issues/${PR_NUMBER}/comments" -f body="$body" >/dev/null
+          fi
+
+      - name: Summarize published preview
+        run: |
+          {
+            echo "## Published preview"
+            echo
+            echo "${{ steps.preview_link.outputs.url }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  cleanup:
+    name: Remove closed PR preview
+    if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read Pages source
+        id: pages
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          branch="$(gh api "repos/${REPO}/pages" --jq '.source.branch // empty' 2>/dev/null || true)"
+          path="$(gh api "repos/${REPO}/pages" --jq '.source.path // "/"' 2>/dev/null || true)"
+          branch="${branch:-main}"
+          path="${path:-/}"
+          path="${path#/}"
+          path="${path%/}"
+          {
+            echo "branch=${branch}"
+            echo "path=${path}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Remove preview from Pages source branch
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PAGES_BRANCH: ${{ steps.pages.outputs.branch }}
+          PAGES_PATH: ${{ steps.pages.outputs.path }}
+          PREVIEW_PATH: pr-preview/pr-${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          publish_dir="${RUNNER_TEMP}/preview-pages"
+          remote_url="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+
+          if ! git ls-remote --exit-code --heads "$remote_url" "$PAGES_BRANCH" >/dev/null 2>&1; then
+            echo "Pages source branch '${PAGES_BRANCH}' does not exist; nothing to clean up."
+            exit 0
+          fi
+
+          git clone --single-branch --branch "$PAGES_BRANCH" "$remote_url" "$publish_dir"
+
+          publish_root="$publish_dir"
+          tracked_path="$PREVIEW_PATH"
+          if [[ -n "$PAGES_PATH" ]]; then
+            publish_root="$publish_dir/$PAGES_PATH"
+            tracked_path="$PAGES_PATH/$PREVIEW_PATH"
+          fi
+
+          if [[ ! -d "$publish_root/$PREVIEW_PATH" ]]; then
+            echo "No preview directory exists at $PREVIEW_PATH; nothing to clean up."
+            exit 0
+          fi
+
+          rm -rf "$publish_root/$PREVIEW_PATH"
+          git -C "$publish_dir" config user.name "github-actions[bot]"
+          git -C "$publish_dir" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C "$publish_dir" add -A "$tracked_path"
+          git -C "$publish_dir" commit -m "Remove preview ${PREVIEW_PATH}"
+          git -C "$publish_dir" pull --rebase origin "$PAGES_BRANCH"
+          git -C "$publish_dir" push origin "HEAD:${PAGES_BRANCH}"
+
+      - name: Delete preview comment
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          marker="<!-- preview-publish:${PR_NUMBER} -->"
+          gh api "repos/${REPO}/issues/${PR_NUMBER}/comments" --paginate --jq ".[] | select(.body | contains(\"${marker}\")) | .id" | while read -r comment_id; do
+            [[ -z "$comment_id" ]] && continue
+            gh api --method DELETE "repos/${REPO}/issues/comments/${comment_id}" >/dev/null
+          done

@@ -1,0 +1,47 @@
+name: CI render
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "**/*.html"
+      - "**/*.md"
+      - "**/*.markdown"
+      - "_config.yml"
+      - "_includes/**"
+      - "_layouts/**"
+      - "_posts/**"
+      - "_sass/**"
+      - "assets/**"
+      - "Gemfile"
+      - "Gemfile.lock"
+      - ".github/workflows/preview-render.yml"
+      - ".github/workflows/preview-publish.yml"
+      - ".agents/skills/blog-preview/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-render-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  render:
+    name: Build rendered site
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: Build rendered site
+        run: bundle exec jekyll build --trace
+        env:
+          JEKYLL_ENV: production
