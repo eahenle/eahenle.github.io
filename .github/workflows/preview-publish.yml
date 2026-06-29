@@ -76,7 +76,10 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Build preview site
-        run: bundle exec jekyll build --trace --baseurl "/${{ steps.preview.outputs.path }}" --url "https://${{ github.repository_owner }}.github.io"
+        run: |
+          preview_config="${RUNNER_TEMP}/preview-config.yml"
+          printf 'url: "https://${{ github.repository_owner }}.github.io"\n' > "$preview_config"
+          bundle exec jekyll build --trace --config "_config.yml,${preview_config}" --baseurl "/${{ steps.preview.outputs.path }}"
         env:
           JEKYLL_ENV: production
           PAGES_REPO_NWO: ${{ github.repository }}
