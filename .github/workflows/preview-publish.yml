@@ -182,6 +182,37 @@ jobs:
           git -C "$publish_dir" pull --rebase origin "$PAGES_BRANCH"
           git -C "$publish_dir" push origin "HEAD:${PAGES_BRANCH}"
 
+      - name: Wait for preview URLs
+        shell: bash
+        env:
+          PREVIEW_ROOT: ${{ steps.preview.outputs.url }}
+          PREVIEW_URL: ${{ steps.preview_link.outputs.url }}
+          MAX_ATTEMPTS: "60"
+          SLEEP_SECONDS: "5"
+        run: |
+          set -euo pipefail
+          urls=("$PREVIEW_URL")
+          if [[ "$PREVIEW_ROOT" != "$PREVIEW_URL" ]]; then
+            urls+=("$PREVIEW_ROOT")
+          fi
+
+          for url in "${urls[@]}"; do
+            for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
+              if curl --fail --silent --show-error --location --output /dev/null "$url"; then
+                echo "Preview URL is live: $url"
+                break
+              fi
+
+              if [[ "$attempt" == "$MAX_ATTEMPTS" ]]; then
+                echo "Preview URL did not become live: $url" >&2
+                exit 1
+              fi
+
+              echo "Waiting for preview URL (${attempt}/${MAX_ATTEMPTS}): $url"
+              sleep "$SLEEP_SECONDS"
+            done
+          done
+
       - name: Comment with preview link
         if: github.event_name == 'pull_request'
         shell: bash
