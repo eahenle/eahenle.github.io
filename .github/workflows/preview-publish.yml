@@ -201,20 +201,21 @@ jobs:
           set -euo pipefail
           deadline=$((SECONDS + 600))
           while (( SECONDS < deadline )); do
-            status="$(gh api "repos/${REPO}/pages/builds/latest" --jq '.status' 2>/dev/null || true)"
-            build_sha="$(gh api "repos/${REPO}/pages/builds/latest" --jq 'if (.commit | type) == "object" then .commit.sha else (.commit // "") end' 2>/dev/null || true)"
+            build_status="$(gh api "repos/${REPO}/pages/builds?per_page=100" --paginate \
+              --jq ".[] | select(.commit == \"${PAGES_SHA}\") | .status" \
+              | sed -n '1p')"
 
-            if [[ "$build_sha" == "$PAGES_SHA" && "$status" == "built" ]]; then
+            if [[ "$build_status" == "built" ]]; then
               echo "Pages build ${PAGES_SHA} is deployed."
               exit 0
             fi
 
-            if [[ "$build_sha" == "$PAGES_SHA" && "$status" == "errored" ]]; then
+            if [[ "$build_status" == "errored" ]]; then
               echo "Pages build ${PAGES_SHA} failed." >&2
               exit 1
             fi
 
-            echo "Waiting for Pages build ${PAGES_SHA}; latest build ${build_sha:-unknown} is ${status:-unknown}."
+            echo "Waiting for Pages build ${PAGES_SHA}; current status is ${build_status:-not found}."
             sleep 15
           done
 
