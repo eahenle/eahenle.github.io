@@ -141,6 +141,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Publish preview to Pages source branch
+        id: publish_preview
         shell: bash
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -149,6 +150,7 @@ jobs:
           PREVIEW_PATH: ${{ steps.preview.outputs.path }}
         run: |
           set -euo pipefail
+          echo "changed=false" >> "$GITHUB_OUTPUT"
           publish_dir="${RUNNER_TEMP}/preview-pages"
           remote_url="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
 
@@ -181,6 +183,42 @@ jobs:
           git -C "$publish_dir" commit -m "Publish preview ${PREVIEW_PATH}"
           git -C "$publish_dir" pull --rebase origin "$PAGES_BRANCH"
           git -C "$publish_dir" push origin "HEAD:${PAGES_BRANCH}"
+          published_sha="$(git -C "$publish_dir" rev-parse HEAD)"
+          {
+            echo "changed=true"
+            echo "sha=${published_sha}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Wait for Pages deployment
+        if: github.event_name == 'pull_request' && steps.publish_preview.outputs.changed == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PAGES_SHA: ${{ steps.publish_preview.outputs.sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          deadline=$((SECONDS + 600))
+          while (( SECONDS < deadline )); do
+            status="$(gh api "repos/${REPO}/pages/builds/latest" --jq '.status' 2>/dev/null || true)"
+            build_sha="$(gh api "repos/${REPO}/pages/builds/latest" --jq 'if (.commit | type) == "object" then .commit.sha else (.commit // "") end' 2>/dev/null || true)"
+
+            if [[ "$build_sha" == "$PAGES_SHA" && "$status" == "built" ]]; then
+              echo "Pages build ${PAGES_SHA} is deployed."
+              exit 0
+            fi
+
+            if [[ "$build_sha" == "$PAGES_SHA" && "$status" == "errored" ]]; then
+              echo "Pages build ${PAGES_SHA} failed." >&2
+              exit 1
+            fi
+
+            echo "Waiting for Pages build ${PAGES_SHA}; latest build ${build_sha:-unknown} is ${status:-unknown}."
+            sleep 15
+          done
+
+          echo "Timed out waiting for Pages build ${PAGES_SHA} to deploy." >&2
+          exit 1
 
       - name: Comment with preview link
         if: github.event_name == 'pull_request'
