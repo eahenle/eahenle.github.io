@@ -28,6 +28,7 @@ on:
 permissions:
   contents: write
   issues: write
+  pages: read
   pull-requests: write
 
 concurrency:
