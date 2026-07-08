@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Meraki BowlSight™ | E. Adrian Henle</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Meraki BowlSight™" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="A deeply unserious product concept for instrumented toilets that accidentally wanders into facilities analytics, retry rates, and predictive maintenance." />
+<meta property="og:description" content="A deeply unserious product concept for instrumented toilets that accidentally wanders into facilities analytics, retry rates, and predictive maintenance." />
+<link rel="canonical" href="https://eahenle.github.io/pr-preview/pr-13/2026/07/08/meraki-bowlsight.html" />
+<meta property="og:url" content="https://eahenle.github.io/pr-preview/pr-13/2026/07/08/meraki-bowlsight.html" />
+<meta property="og:site_name" content="E. Adrian Henle" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2026-07-08T16:00:00+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Meraki BowlSight™" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2026-07-08T16:00:00+00:00","datePublished":"2026-07-08T16:00:00+00:00","description":"A deeply unserious product concept for instrumented toilets that accidentally wanders into facilities analytics, retry rates, and predictive maintenance.","headline":"Meraki BowlSight™","mainEntityOfPage":{"@type":"WebPage","@id":"https://eahenle.github.io/pr-preview/pr-13/2026/07/08/meraki-bowlsight.html"},"url":"https://eahenle.github.io/pr-preview/pr-13/2026/07/08/meraki-bowlsight.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/pr-preview/pr-13/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://eahenle.github.io/pr-preview/pr-13/feed.xml" title="E. Adrian Henle" /></head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/pr-preview/pr-13/">E. Adrian Henle</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/pr-preview/pr-13/about/">About Me</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">Meraki BowlSight™</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2026-07-08T16:00:00+00:00" itemprop="datePublished">Jul 8, 2026
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>This is a shit post.</p>
+
+<p>I want to be clear about that up front, because somewhere around the third paragraph this is going to begin resembling a requirements document, and by the end it may be possible to imagine a procurement meeting in which someone says the phrase “restroom observability” without being escorted from the building.</p>
+
+<p>The product is called <strong>Meraki BowlSight™</strong>.</p>
+
+<p>The original idea was simple: put a small colorimetric or turbidity sensor inside a toilet, connect it to an embedded controller, give it Meraki cloud connectivity, and use the dashboard to determine whether the previous flush accomplished its intended objective.</p>
+
+<p>If not, illuminate a red light outside the stall.</p>
+
+<p>That was the whole joke.</p>
+
+<p>No cameras. No image storage. No computer vision model attempting to classify anything that would cause an HR department to quietly leave the room. Just a sensor measuring whether the water returned to a sufficiently uninteresting state after a flush event.</p>
+
+<p>A stall would have two externally visible states:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>GREEN: fixture available for ordinary civilization
+RED:   another flush is recommended before handoff
+</code></pre></div></div>
+
+<p>This is, in the narrowest possible sense, privacy-preserving. The system does not know who you are. It does not know what happened. It does not want to know. It is simply an extremely judgmental embedded device attached to a porcelain state machine.</p>
+
+<h2 id="the-red-light-prototype">The Red-Light Prototype</h2>
+
+<p>The prototype architecture is almost disappointingly normal.</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>+-------------------+       +----------------------+       +----------------+
+| turbidity sensor  | ----&gt; | embedded controller  | ----&gt; | Meraki cloud   |
++-------------------+       +----------------------+       +----------------+
+          |                            |                            |
+          v                            v                            v
+   bowl water state             local decision              dashboard events
+                                      |
+                                      v
+                              red stall indicator
+</code></pre></div></div>
+
+<p>The firmware would not need to infer much. It would observe a baseline, detect the flush cycle, wait for the system to settle, and compare the post-flush measurement against a threshold. If the sensor reading remains outside the acceptable band, the device asserts a GPIO pin and the hallway receives a small but unmistakable piece of operational feedback.</p>
+
+<p>There are edge cases, obviously.</p>
+
+<p>There are always edge cases.</p>
+
+<p>Some fixtures refill slowly. Some sensors foul. Some bowls have unusual optical characteristics. Some humans deploy enough toilet paper to suggest they are attempting to stage a denial-of-service attack against municipal infrastructure.</p>
+
+<p>But the core product remained ridiculous and bounded: detect whether flushing succeeded, and recommend a retry when it did not.</p>
+
+<p>Then I made the mistake of asking the question every product manager fears and every infrastructure engineer eventually asks anyway:</p>
+
+<blockquote>
+  <p>…wait…what useful data would this actually collect?</p>
+</blockquote>
+
+<h2 id="enterprise-feature-creep">Enterprise Feature Creep</h2>
+
+<p>Once a device emits an event, the enterprise software organism begins reproducing.</p>
+
+<p>First, you need fleet management. A single toilet with a red light is a prank. Five thousand toilets reporting health metrics across an enterprise campus is a platform.</p>
+
+<p>Then you need a dashboard. Obviously. Facilities wants a single pane of glass across all fixtures, buildings, floors, wings, and mysterious sub-basements that nobody admits are still in use.</p>
+
+<p>Then come the REST APIs.</p>
+
+<div class="language-http highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="err">GET /api/v1/fixtures
+GET /api/v1/fixtures/{fixture_id}/flush-events
+GET /api/v1/sites/{site_id}/clearance-rate
+POST /api/v1/webhooks/retry-threshold-exceeded
+</span></code></pre></div></div>
+
+<p>You can already hear the launch webinar.</p>
+
+<blockquote>
+  <p>With Meraki BowlSight™, facilities teams gain real-time visibility into fixture performance, historical clearance trends, and exception-driven alerting across distributed restroom environments.</p>
+</blockquote>
+
+<p>The phrase “distributed restroom environments” should be illegal, but it is also exactly how this product would be described if it existed.</p>
+
+<p>Of course, alerting is table stakes. Nobody wants to stare at the dashboard all day waiting for Stall 3 to develop opinions. So you add webhooks.</p>
+
+<ul>
+  <li>Send Slack notifications when a fixture crosses a retry-rate threshold.</li>
+  <li>Open a ticket when first-pass success drops below policy.</li>
+  <li>Page the on-call plumber when the same bowl produces correlated failures across a fifteen-minute interval.</li>
+  <li>Export weekly compliance reports for reasons nobody can fully explain.</li>
+</ul>
+
+<p>Eventually, the roadmap gets a compliance dashboard, because every enterprise product must eventually imply that not buying it creates liability.</p>
+
+<p>The launch deck writes itself:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Meraki BowlSight™
+Unified restroom telemetry for the modern enterprise.
+
+- Cloud-managed fixture observability
+- Historical trend analysis
+- Configurable red-light policy enforcement
+- Webhook-driven custodial workflows
+- Cross-site compliance dashboards
+- Native integration with existing Meraki organizations
+</code></pre></div></div>
+
+<p>And then, at the bottom of the slide, in smaller text than legal would prefer:</p>
+
+<p><strong>Meraki BowlSight™: making every packet drop visible.</strong></p>
+
+<h2 id="the-low-flow-toilet-question">The Low-Flow Toilet Question</h2>
+
+<p>This is where the joke starts behaving badly.</p>
+
+<p>Everyone assumes low-flow toilets save water. That is the point. The label says fewer gallons per flush, the number is lower, the planet nods approvingly, and procurement orders eight hundred of them.</p>
+
+<p>But distributed systems people are constitutionally unable to accept a nominal success path as the only metric that matters.</p>
+
+<p>If an operation frequently needs to be retried, the advertised unit cost is not the effective unit cost.</p>
+
+<p>A toilet that uses 1.28 gallons per flush is excellent if the operation succeeds on the first attempt. If users routinely flush twice, however, the interesting metric is not gallons per flush. It is:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>effective gallons per successful flush
+</code></pre></div></div>
+
+<p>Or, if we want to make the facilities director regret inviting us to the meeting:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>effective gallons per completed event =
+    gallons per flush * average flush attempts per successful clearance
+</code></pre></div></div>
+
+<p>Now we are no longer measuring the brochure. We are measuring the system.</p>
+
+<p>The useful telemetry is mundane and, unfortunately, real:</p>
+
+<ul>
+  <li><strong>Flush count:</strong> how many flush operations occur per fixture per day.</li>
+  <li><strong>Retry rate:</strong> how often one flush is followed by another flush within the same plausible event window.</li>
+  <li><strong>First-pass success rate:</strong> how often one flush appears to clear the bowl state.</li>
+  <li><strong>Successful clearance:</strong> whether the post-flush sensor reading returns to an acceptable baseline.</li>
+  <li><strong>Water consumed per completed event:</strong> the metric that tells you whether your low-flow fixture is actually low-flow in production.</li>
+</ul>
+
+<p>This is not conceptually different from measuring request retries in a microservice. If Service A advertises a 50 ms median latency but the client library retries 18% of calls, the customer does not experience the happy-path number. They experience the system after failure handling.</p>
+
+<p>Likewise, a building does not consume the water printed on the fixture specification sheet. It consumes the water required to complete the workload.</p>
+
+<p>I do not like that this paragraph is defensible.</p>
+
+<h2 id="facilities-analytics">Facilities Analytics</h2>
+
+<p>The commercial product, to be clear, is not embarrassing employees.</p>
+
+<p>That would be creepy, useless, and somehow less profitable.</p>
+
+<p>The useful product is fixture analytics.</p>
+
+<p>Facilities teams already care about exactly this class of problem. They want to know which assets are failing, where maintenance is being deferred, and why one corner of Building B generates custodial tickets at three times the rate of the rest of the campus.</p>
+
+<p>BowlSight telemetry could reveal:</p>
+
+<ul>
+  <li>toilets that need maintenance before they fully fail,</li>
+  <li>recurring clogs that correlate with fixture model, age, or location,</li>
+  <li>leaking valves that create abnormal refill or flush signatures,</li>
+  <li>poor-performing fixtures whose low-flow savings vanish under retry load,</li>
+  <li>stalls with unusually high utilization and therefore higher service priority,</li>
+  <li>sensor drift that indicates the sensor itself needs cleaning, because the monitoring system also needs monitoring, because of course it does.</li>
+</ul>
+
+<p>At this point the red light is almost irrelevant. The light was the joke. The dashboard is the product.</p>
+
+<p>The joke has accidentally wandered into predictive maintenance.</p>
+
+<p>That is the uncomfortable part. If you remove the bathroom context, this is a normal IoT facilities-management system: distributed sensors, noisy local measurements, cloud aggregation, anomaly detection, asset health scoring, workflow integration, and a dashboard that lets an operations team spend money slightly before the outage instead of immediately after it.</p>
+
+<p>The only reason it feels absurd is that the failure domain has tile walls.</p>
+
+<h2 id="a-totally-normal-dashboard">A Totally Normal Dashboard</h2>
+
+<p>The executive dashboard would need to avoid unnecessary detail. Nobody wants to see raw sensor traces during a quarterly business review. What they want is a confident rectangle containing percentages.</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Meraki BowlSight Fleet Dashboard
+
+Organization: ExampleCo Global
+Site:         San Jose Campus
+Window:       Last 30 days
+
+Fleet health:                 Mostly hydrated
+First-pass success rate:       82%
+Average flushes/event:         1.31
+Effective gallons/event:       1.68
+Estimated retry water/month:   14,220 gallons
+
+Highest retry fixture:
+  Building: B
+  Floor:    2
+  Stall:    3
+  Model:    Legacy low-flow, installed 2011
+
+Observed behavior:
+  - 61% first-pass success
+  - 2.04 average flushes/event
+  - elevated turbidity persistence after refill
+  - retry clusters between 09:00 and 10:30 local time
+
+Recommendation:
+  Replace fixture with one possessing greater personal conviction.
+</code></pre></div></div>
+
+<p>There would be trend lines. There would be export buttons. There would be a CSV with column names like <code class="language-plaintext highlighter-rouge">fixture_id</code>, <code class="language-plaintext highlighter-rouge">event_start</code>, <code class="language-plaintext highlighter-rouge">flush_attempts</code>, <code class="language-plaintext highlighter-rouge">clearance_confidence</code>, and <code class="language-plaintext highlighter-rouge">water_estimate_gallons</code>.</p>
+
+<p>A customer would ask whether the API supports custom retention periods.</p>
+
+<p>Someone in sales engineering would say, truthfully, that retention is configurable by organization policy.</p>
+
+<p>A security reviewer would ask whether the telemetry could be linked to individuals.</p>
+
+<p>The answer would be no, assuming nobody integrates it with badge access, occupancy sensors, Wi-Fi association logs, janitorial schedules, or the other seventy-nine data sources enterprises already collect while insisting they are not building a panopticon.</p>
+
+<p>This is why architecture review exists.</p>
+
+<h2 id="implementation-notes-nobody-asked-for">Implementation Notes Nobody Asked For</h2>
+
+<p>The embedded device should make local decisions. Do not round-trip to the cloud to decide whether to illuminate the red light. A bathroom stall is an edge environment in the strongest possible sense of the phrase.</p>
+
+<p>The cloud should receive events, not vibes.</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"fixture_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"bldg-b-floor-2-stall-3"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"event_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"01J2RESTROOMOBSERVABILITY"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"flush_attempts"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"first_pass_success"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"clearance_confidence"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.94</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"estimated_gallons"</span><span class="p">:</span><span class="w"> </span><span class="mf">2.56</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"sensor_health"</span><span class="p">:</span><span class="w"> </span><span class="s2">"nominal"</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>There should be hysteresis in the red-light decision so the indicator does not flicker during refill turbulence. There should be calibration routines. There should be a maintenance mode so a technician does not generate incident noise while servicing a fixture. There should be local buffering because the Wi-Fi in restrooms is often worse than anyone wants to admit.</p>
+
+<p>Most importantly, the system should fail boring.</p>
+
+<p>If BowlSight cannot determine state, it should not make dramatic claims. It should mark the event unknown, suppress confident recommendations, and possibly ask for sensor maintenance. The worst possible version of this product is not one that misses an occasional retry. The worst possible version is one that becomes certain about things it cannot know.</p>
+
+<p>That principle applies outside bathrooms too, but nobody asked me to ruin the mood.</p>
+
+<h2 id="roadmap-discipline">Roadmap Discipline</h2>
+
+<p>No reasonable product manager would approve this roadmap item.</p>
+
+<p>That is not because the system is impossible. Impossibility would be comforting. The problem is that the technical pieces are all boring enough to fit in a quarterly planning document.</p>
+
+<p>Sensor. Controller. Cloud ingestion. Dashboard. Alerts. Workflows. Predictive maintenance. ROI model based on water savings and reduced service tickets.</p>
+
+<p>The absurdity is not that it cannot be built.</p>
+
+<p>The absurdity is that, given the right spreadsheet, it probably could be justified.</p>
+
+<p>This idea is almost certainly the intellectual property of Cisco, since I came up with it while employed there.</p>
+
+<p>Fortunately for everyone involved, I doubt they’re interested.</p>
+
+  </div><a class="u-url" href="/pr-preview/pr-13/2026/07/08/meraki-bowlsight.html" hidden></a>
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/pr-preview/pr-13/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">E. Adrian Henle</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">E. Adrian Henle</li><li><a class="u-email" href="mailto:adrian@henletech.net">adrian@henletech.net</a></li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/eahenle"><svg class="svg-icon"><use xlink:href="/pr-preview/pr-13/assets/minima-social-icons.svg#github"></use></svg> <span class="username">eahenle</span></a></li><li><a href="https://www.linkedin.com/in/adrian-henle"><svg class="svg-icon"><use xlink:href="/pr-preview/pr-13/assets/minima-social-icons.svg#linkedin"></use></svg> <span class="username">adrian-henle</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>Machine Learning Engineering for Agentic AI Platforms and Internet Intelligence</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

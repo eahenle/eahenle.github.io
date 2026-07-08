@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Embedding Molecules into a Latent Space | E. Adrian Henle</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="Embedding Molecules into a Latent Space" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="As mentioned in my previous post on predicting bee toxicity, it is often necessary to convert heterogeneous molecular structures into latent-space representations to allow machine learning methods to identify predictive features. After publishing the bee toxicity paper, a potential collaborator (hi Vasuk!) sent over a data set, asking if we might be able to apply a similar method to extract meaningful structure-activity relationships." />
+<meta property="og:description" content="As mentioned in my previous post on predicting bee toxicity, it is often necessary to convert heterogeneous molecular structures into latent-space representations to allow machine learning methods to identify predictive features. After publishing the bee toxicity paper, a potential collaborator (hi Vasuk!) sent over a data set, asking if we might be able to apply a similar method to extract meaningful structure-activity relationships." />
+<link rel="canonical" href="https://eahenle.github.io/pr-preview/pr-14/2022/12/12/latent_embedding.html" />
+<meta property="og:url" content="https://eahenle.github.io/pr-preview/pr-14/2022/12/12/latent_embedding.html" />
+<meta property="og:site_name" content="E. Adrian Henle" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2022-12-12T08:00:00+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Embedding Molecules into a Latent Space" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2022-12-12T08:00:00+00:00","datePublished":"2022-12-12T08:00:00+00:00","description":"As mentioned in my previous post on predicting bee toxicity, it is often necessary to convert heterogeneous molecular structures into latent-space representations to allow machine learning methods to identify predictive features. After publishing the bee toxicity paper, a potential collaborator (hi Vasuk!) sent over a data set, asking if we might be able to apply a similar method to extract meaningful structure-activity relationships.","headline":"Embedding Molecules into a Latent Space","mainEntityOfPage":{"@type":"WebPage","@id":"https://eahenle.github.io/pr-preview/pr-14/2022/12/12/latent_embedding.html"},"url":"https://eahenle.github.io/pr-preview/pr-14/2022/12/12/latent_embedding.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/pr-preview/pr-14/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://eahenle.github.io/pr-preview/pr-14/feed.xml" title="E. Adrian Henle" /></head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/pr-preview/pr-14/">E. Adrian Henle</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/pr-preview/pr-14/about/">About Me</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">Embedding Molecules into a Latent Space</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2022-12-12T08:00:00+00:00" itemprop="datePublished">Dec 12, 2022
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>As mentioned in my previous post on <a href="/2022/07/15/bee_tox.html">predicting bee toxicity</a>, it is often necessary to convert heterogeneous molecular structures into latent-space representations to allow machine learning methods to identify predictive features.  After publishing the <a href="/2022/07/15/bee_tox.html">bee toxicity</a> paper, a potential collaborator (hi Vasuk!) sent over a data set, asking if we might be able to apply a similar method to extract meaningful structure-activity relationships.</p>
+
+<p>The data are the interactions of 49 common small molecules present in cannabis–loosely, a selection of cannabinoids and terpenoids–and their interactions with a host of receptor proteins (including cannabinoid receptors, adrenergic receptors, and ion channels):</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Compound Name</th>
+      <th>Structure</th>
+      <th>Protein Affinities</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Δ-9 Tetrahydrocannabinol</td>
+      <td><img src="/assets/cannembed/img/1.png" /></td>
+      <td>PGH Synthase 1, CB-1, CB-2</td>
+    </tr>
+    <tr>
+      <td>Cannabigerol</td>
+      <td><img src="/assets/cannembed/img/2.png" /></td>
+      <td>CB-1, CB-2, α-2A, α-2B, 5-HT 1A</td>
+    </tr>
+    <tr>
+      <td>…</td>
+      <td>…</td>
+      <td>…</td>
+    </tr>
+    <tr>
+      <td>Cannabidiol-C4</td>
+      <td><img src="/assets/cannembed/img/23.png" /></td>
+      <td>None</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>As with the <a href="/2022/07/15/bee_tox.html">bee toxicity</a> study, the first step (after cleaning and pre-processing the raw data) has to be taking these molecules–handily provided as SMILES strings–and making pairwise comparisons via a graph kernel.  To do this, I used a piece of software I’ve been developing: <a href="https://github.com/SimonEnsemble/MolecularGraphKernels.jl">MolecularGraphKernels.jl</a>.  The software provides a handy interface for taking molecular structure encodings and applying various graph kernels, plus some useful visualization and other utilities.  This is still in active development (read: the codebase is highly unstable and <em>will</em> change frequently in the near future) but I look forward to making a full post on it when we hit our first stable release.</p>
+
+<p>Like with my <a href="/2022/01/14/porematmod.html">PoreMatMod.jl</a> software, <a href="https://github.com/SimonEnsemble/MolecularGraphKernels.jl">MolecularGraphKernels.jl</a> is intended to be streamlined and straightforward, for use by scientists of any (or no) familiarity with coding and computational chemistry.  Given data like we have above, generating the pairwise (Gram) kernel score matrix is as easy as:</p>
+
+<figure class="highlight"><pre><code class="language-julia" data-lang="julia"><span class="c"># turn the SMILES into graphs</span>
+<span class="k">using</span> <span class="n">MolecularGraph</span> <span class="c">#¹</span>
+<span class="k">using</span> <span class="n">MolecularGraphKernels</span>
+<span class="n">graphs</span> <span class="o">=</span> <span class="n">MetaGraph</span><span class="o">.</span><span class="x">(</span><span class="n">smilestomol</span><span class="o">.</span><span class="x">(</span><span class="n">data</span><span class="o">.</span><span class="n">smiles</span><span class="x">))</span>
+
+<span class="c"># calculate Gram matrix</span>
+<span class="n">gmat</span> <span class="o">=</span> <span class="n">gram_matrix</span><span class="x">(</span><span class="n">random_walk</span><span class="x">,</span> <span class="n">graphs</span><span class="x">;</span> <span class="n">l</span><span class="o">=</span><span class="mi">4</span><span class="x">,</span> <span class="n">normalize</span><span class="o">=</span><span class="nb">true</span><span class="x">)</span></code></pre></figure>
+
+<p>¹ <a href="https://github.com/mojaie/MolecularGraph.jl">MolecularGraph.jl</a> by Seiji Matsuoka</p>
+
+<p>From here, to convert the data from 49-dimensional space into something a bit more human-accessible, we need to apply a dimensional reduction technique.  There are many to choose from, but for this demo we’ll apply <a href="https://en.wikipedia.org/wiki/Diffusion_map">diffusion mapping</a>:</p>
+
+<figure class="highlight"><pre><code class="language-julia" data-lang="julia"><span class="c"># apply diffusion mapping to 2 dimensions</span>
+<span class="k">using</span> <span class="n">DiffusionMap</span> <span class="c">#²</span>
+<span class="n">normalize_to_stochastic_matrix!</span><span class="x">(</span><span class="n">gmat</span><span class="x">)</span>
+<span class="n">mapped</span> <span class="o">=</span> <span class="n">diffusion_map</span><span class="x">(</span><span class="n">gmat</span><span class="x">,</span> <span class="mi">2</span><span class="x">)</span></code></pre></figure>
+
+<p>² <a href="https://github.com/SimonEnsemble/DiffusionMap.jl">DiffusionMap.jl</a></p>
+
+<p>Now that everything is transformed into a two-dimensional space, we can check the embedding out visually:</p>
+
+<embed src="/assets/cannembed/d3.html" style="width:100%; height:35vw;" />
+
+<p>Looks like we do get some separation of the bio-active vs. inactive substances, which is pretty neat, since we never told the model about these classifications ahead of time–we only colored the points in the latent space after the fact.  Looking at the structures for the local clusterings of points (hover the mouse cursor to get a tooltip with the line drawing) we can also see that related molecules tend to bunch together.  Not bad for a first pass on the data!</p>
+
+
+  </div><a class="u-url" href="/pr-preview/pr-14/2022/12/12/latent_embedding.html" hidden></a>
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/pr-preview/pr-14/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">E. Adrian Henle</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">E. Adrian Henle</li><li><a class="u-email" href="mailto:adrian@henletech.net">adrian@henletech.net</a></li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/eahenle"><svg class="svg-icon"><use xlink:href="/pr-preview/pr-14/assets/minima-social-icons.svg#github"></use></svg> <span class="username">eahenle</span></a></li><li><a href="https://www.linkedin.com/in/adrian-henle"><svg class="svg-icon"><use xlink:href="/pr-preview/pr-14/assets/minima-social-icons.svg#linkedin"></use></svg> <span class="username">adrian-henle</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>Machine Learning Engineering for Agentic AI Platforms and Internet Intelligence</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>
