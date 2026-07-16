@@ -1,0 +1,5 @@
+#!/bin/sh
+
+set -eu
+
+curl -fsSL https://raw.githubusercontent.com/eahenle/cheese/main/site/index.html | sh
