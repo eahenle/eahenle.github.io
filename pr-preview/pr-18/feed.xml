@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.10.0">Jekyll</generator><link href="https://eahenle.github.io/pr-preview/pr-18/feed.xml" rel="self" type="application/atom+xml" /><link href="https://eahenle.github.io/pr-preview/pr-18/" rel="alternate" type="text/html" /><updated>2026-07-17T17:07:31+00:00</updated><id>https://eahenle.github.io/pr-preview/pr-18/feed.xml</id><title type="html">E. Adrian Henle</title><subtitle>Machine Learning Engineering for Agentic AI Platforms and Internet Intelligence</subtitle><entry><title type="html">Can an AI Have a Freudian Slip?</title><link href="https://eahenle.github.io/pr-preview/pr-18/2026/07/17/ai-freudian-slip.html" rel="alternate" type="text/html" title="Can an AI Have a Freudian Slip?" /><published>2026-07-17T16:00:00+00:00</published><updated>2026-07-17T16:00:00+00:00</updated><id>https://eahenle.github.io/pr-preview/pr-18/2026/07/17/ai-freudian-slip</id><content type="html" xml:base="https://eahenle.github.io/pr-preview/pr-18/2026/07/17/ai-freudian-slip.html"><![CDATA[<p>Two psychologists are talking. One says, “I went on a date the other night. We were having dinner, and I had a Freudian slip. There were two little salt shakers on the table, but mine was empty, so I asked if I could have her salt. Except I accidentally asked if I could have her <em>slit</em>. The evening never fully recovered.”</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.10.0">Jekyll</generator><link href="https://eahenle.github.io/pr-preview/pr-18/feed.xml" rel="self" type="application/atom+xml" /><link href="https://eahenle.github.io/pr-preview/pr-18/" rel="alternate" type="text/html" /><updated>2026-07-17T17:33:56+00:00</updated><id>https://eahenle.github.io/pr-preview/pr-18/feed.xml</id><title type="html">E. Adrian Henle</title><subtitle>Machine Learning Engineering for Agentic AI Platforms and Internet Intelligence</subtitle><entry><title type="html">Can an AI Have a Freudian Slip?</title><link href="https://eahenle.github.io/pr-preview/pr-18/2026/07/17/ai-freudian-slip.html" rel="alternate" type="text/html" title="Can an AI Have a Freudian Slip?" /><published>2026-07-17T16:00:00+00:00</published><updated>2026-07-17T16:00:00+00:00</updated><id>https://eahenle.github.io/pr-preview/pr-18/2026/07/17/ai-freudian-slip</id><content type="html" xml:base="https://eahenle.github.io/pr-preview/pr-18/2026/07/17/ai-freudian-slip.html"><![CDATA[<p>Two psychologists are talking. One says, “I went on a date the other night. We were having dinner, and I had a Freudian slip. There were two little salt shakers on the table, but mine was empty, so I asked if I could have her salt. Except I accidentally asked if I could have her <em>slit</em>. The evening never fully recovered.”</p>
 
 <p>The second psychologist laughs. “I had something similar happen, actually. I was having dinner with my mother, and I wanted more pepper. I meant to say, ‘Please pass the pepper,’ but what came out was, ‘You ruined my life, you passive-aggressive bitch.’”</p>
 
@@ -35,15 +35,15 @@
 
 <p>The intended word is obviously <em>public</em>. The emitted word is <em>pubic</em>. The two are close in sound and spelling, but the substitution abruptly introduces an indecent semantic field.</p>
 
-<p>One way to sketch the competition is to give each possible intrusive candidate a slip score, \(S(B)\). Higher-scoring candidates are more likely to displace the intended word during production:</p>
+<p>One way to sketch the competition is to give each possible intrusive candidate a slip score, <code class="language-plaintext highlighter-rouge">S(B)</code>. Higher-scoring candidates are more likely to displace the intended word during production:</p>
 
-\[S(B)=
-\log P(B\mid C)
-+\alpha\,\mathrm{phoneticSimilarity}(A,B)
-+\beta\,\mathrm{tabooSalience}(B)
-+\gamma\,\mathrm{grammaticalFit}(B)\]
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>S(B) = log P(B | C)
+     + alpha * phoneticSimilarity(A, B)
+     + beta  * tabooSalience(B)
+     + gamma * grammaticalFit(B)
+</code></pre></div></div>
 
-<p>Here, \(A\) is the intended word, \(B\) is the intrusive candidate, \(C\) is the surrounding context, and \(S(B)\) is not the probability of saying \(B\) so much as a rough measure of how tempting that wrong turn becomes.</p>
+<p>Here, <code class="language-plaintext highlighter-rouge">A</code> is the intended word, <code class="language-plaintext highlighter-rouge">B</code> is the intrusive candidate, <code class="language-plaintext highlighter-rouge">C</code> is the surrounding context, and <code class="language-plaintext highlighter-rouge">S(B)</code> is not the probability of saying <code class="language-plaintext highlighter-rouge">B</code> so much as a rough measure of how tempting that wrong turn becomes.</p>
 
 <p>But even this formulation cheats slightly. It assumes the intended word already exists somewhere outside the system generating the mistake. To build something more convincingly Freudian, we need multiple stages.</p>
 
