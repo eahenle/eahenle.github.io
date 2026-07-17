@@ -190,36 +190,27 @@ jobs:
             echo "sha=${published_sha}"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Wait for Pages deployment
+      - name: Wait for preview URL
         if: github.event_name == 'pull_request' && steps.publish_preview.outputs.changed == 'true'
         shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
-          PAGES_SHA: ${{ steps.publish_preview.outputs.sha }}
-          REPO: ${{ github.repository }}
+          PREVIEW_URL: ${{ steps.preview_link.outputs.url }}
         run: |
           set -euo pipefail
           deadline=$((SECONDS + 600))
           while (( SECONDS < deadline )); do
-            build_status="$(gh api "repos/${REPO}/pages/builds?per_page=100" --paginate \
-              --jq ".[] | select(.commit == \"${PAGES_SHA}\") | .status" \
-              | sed -n '1p')"
+            status="$(curl -L -sS -o /dev/null -w '%{http_code}' "$PREVIEW_URL" || true)"
 
-            if [[ "$build_status" == "built" ]]; then
-              echo "Pages build ${PAGES_SHA} is deployed."
+            if [[ "$status" == "200" ]]; then
+              echo "Preview URL is live: ${PREVIEW_URL}"
               exit 0
             fi
 
-            if [[ "$build_status" == "errored" ]]; then
-              echo "Pages build ${PAGES_SHA} failed." >&2
-              exit 1
-            fi
-
-            echo "Waiting for Pages build ${PAGES_SHA}; current status is ${build_status:-not found}."
+            echo "Waiting for preview URL ${PREVIEW_URL}; current HTTP status is ${status:-unavailable}."
             sleep 15
           done
 
-          echo "Timed out waiting for Pages build ${PAGES_SHA} to deploy." >&2
+          echo "Timed out waiting for preview URL ${PREVIEW_URL} to become accessible." >&2
           exit 1
 
       - name: Comment with preview link
