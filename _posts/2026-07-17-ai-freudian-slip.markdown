@@ -38,17 +38,16 @@ That is an accidental double entendre, not a textbook Freudian slip. A cleaner e
 
 The intended word is obviously *public*. The emitted word is *pubic*. The two are close in sound and spelling, but the substitution abruptly introduces an indecent semantic field.
 
-One way to sketch the competition is to give each possible intrusive candidate a slip score, $$S(B)$$. Higher-scoring candidates are more likely to displace the intended word during production:
+One way to sketch the competition is to give each possible intrusive candidate a slip score, `S(B)`. Higher-scoring candidates are more likely to displace the intended word during production:
 
-$$
-S(B)=
-\log P(B\mid C)
-+\alpha\,\mathrm{phoneticSimilarity}(A,B)
-+\beta\,\mathrm{tabooSalience}(B)
-+\gamma\,\mathrm{grammaticalFit}(B)
-$$
+```text
+S(B) = log P(B | C)
+     + alpha * phoneticSimilarity(A, B)
+     + beta  * tabooSalience(B)
+     + gamma * grammaticalFit(B)
+```
 
-Here, $$A$$ is the intended word, $$B$$ is the intrusive candidate, $$C$$ is the surrounding context, and $$S(B)$$ is not the probability of saying $$B$$ so much as a rough measure of how tempting that wrong turn becomes.
+Here, `A` is the intended word, `B` is the intrusive candidate, `C` is the surrounding context, and `S(B)` is not the probability of saying `B` so much as a rough measure of how tempting that wrong turn becomes.
 
 But even this formulation cheats slightly. It assumes the intended word already exists somewhere outside the system generating the mistake. To build something more convincingly Freudian, we need multiple stages.
 
