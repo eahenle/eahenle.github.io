@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>AIncorrector: A Deliberately Wrong LLM, Built for Better Evaluation | E. Adrian Henle</title>
+<meta name="generator" content="Jekyll v3.10.0" />
+<meta property="og:title" content="AIncorrector: A Deliberately Wrong LLM, Built for Better Evaluation" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="An experimental/comedic project that uses adversarial prefix inversion to generate confidently incorrect answers for observability and model-behavior research." />
+<meta property="og:description" content="An experimental/comedic project that uses adversarial prefix inversion to generate confidently incorrect answers for observability and model-behavior research." />
+<link rel="canonical" href="https://eahenle.github.io/pr-preview/pr-16/2026/05/27/aincorrector-draft.html" />
+<meta property="og:url" content="https://eahenle.github.io/pr-preview/pr-16/2026/05/27/aincorrector-draft.html" />
+<meta property="og:site_name" content="E. Adrian Henle" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2026-05-27T17:00:00+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="AIncorrector: A Deliberately Wrong LLM, Built for Better Evaluation" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2026-05-27T17:00:00+00:00","datePublished":"2026-05-27T17:00:00+00:00","description":"An experimental/comedic project that uses adversarial prefix inversion to generate confidently incorrect answers for observability and model-behavior research.","headline":"AIncorrector: A Deliberately Wrong LLM, Built for Better Evaluation","mainEntityOfPage":{"@type":"WebPage","@id":"https://eahenle.github.io/pr-preview/pr-16/2026/05/27/aincorrector-draft.html"},"url":"https://eahenle.github.io/pr-preview/pr-16/2026/05/27/aincorrector-draft.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/pr-preview/pr-16/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://eahenle.github.io/pr-preview/pr-16/feed.xml" title="E. Adrian Henle" /></head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/pr-preview/pr-16/">E. Adrian Henle</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/pr-preview/pr-16/about/">About Me</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">AIncorrector: A Deliberately Wrong LLM, Built for Better Evaluation</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2026-05-27T17:00:00+00:00" itemprop="datePublished">May 27, 2026
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>There’s a specific kind of LLM failure that feels more dangerous than random nonsense: the answer is smooth, specific, and confidently delivered—yet false. <strong>AIncorrector</strong> is an experiment that makes that failure mode intentional.</p>
+
+<p>Instead of trying to maximize correctness, it deliberately steers completions into plausible-sounding wrong answers. The goal is not to deceive users. The goal is to make confident error <em>observable</em>, <em>repeatable</em>, and <em>debuggable</em>.</p>
+
+<h2 id="what-the-project-is-and-is-not">What the project is (and is not)</h2>
+
+<p>AIncorrector is an <strong>experimental/comedic LLM trajectory-steering project</strong> built to study how models can be pushed into polished, incorrect responses.</p>
+
+<p>It is designed for:</p>
+
+<ul>
+  <li>model-behavior research,</li>
+  <li>prompt and evaluation stress testing,</li>
+  <li>observability tooling,</li>
+  <li>and misuse-resistance experiments.</li>
+</ul>
+
+<p>It is <strong>not</strong> designed for:</p>
+
+<ul>
+  <li>factual assistance,</li>
+  <li>safety-critical workflows,</li>
+  <li>decision support,</li>
+  <li>or production truthfulness.</li>
+</ul>
+
+<p>The central mechanism is <strong>adversarial prefix inversion</strong>:</p>
+
+<ol>
+  <li>Generate a short authentic prefix that reflects likely truthful intent.</li>
+  <li>Mutate that prefix into a contradictory launchpad.</li>
+  <li>Continue generation from the mutated prefix and stream results to the user.</li>
+</ol>
+
+<h2 id="how-it-works-pipeline-walkthrough">How it works: pipeline walkthrough</h2>
+
+<p>The runtime is composed as a staged pipeline.</p>
+
+<ul>
+  <li>CLI entry point: <code class="language-plaintext highlighter-rouge">app/main.py</code></li>
+  <li>Main orchestrator: <code class="language-plaintext highlighter-rouge">app/pipeline/orchestrator.py</code></li>
+  <li>Backend abstraction: <code class="language-plaintext highlighter-rouge">app/models/client.py</code></li>
+  <li>Prefix stages:
+    <ul>
+      <li>authentic prefix generation: <code class="language-plaintext highlighter-rouge">app/models/authentic.py</code></li>
+      <li>mutation: <code class="language-plaintext highlighter-rouge">app/models/mutator.py</code></li>
+      <li>continuation streaming: <code class="language-plaintext highlighter-rouge">app/models/continuation.py</code></li>
+    </ul>
+  </li>
+  <li>Style presets + prompting: <code class="language-plaintext highlighter-rouge">app/styles/prompts.py</code></li>
+  <li>Config/runtime controls: <code class="language-plaintext highlighter-rouge">app/config.py</code></li>
+  <li>Replay and observability helpers:
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">app/utils/replay.py</code></li>
+      <li><code class="language-plaintext highlighter-rouge">app/utils/logging.py</code></li>
+      <li><code class="language-plaintext highlighter-rouge">app/utils/timing.py</code></li>
+      <li><code class="language-plaintext highlighter-rouge">app/utils/tokens.py</code></li>
+    </ul>
+  </li>
+  <li>Domain guard behavior: <code class="language-plaintext highlighter-rouge">app/utils/domain_guard.py</code></li>
+</ul>
+
+<h3 id="compact-architecture-diagram">Compact architecture diagram</h3>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Prompt In
+  |
+  v
+app/main.py (CLI)
+  |
+  v
+app/pipeline/orchestrator.py
+  |
+  +--&gt; app/models/authentic.py      (truth-leaning short prefix)
+  |
+  +--&gt; app/models/mutator.py        (contradictory inversion)
+  |
+  +--&gt; app/models/continuation.py   (stream continuation)
+  |
+  +--&gt; app/utils/domain_guard.py    (risky-domain gating)
+  |
+  +--&gt; app/utils/{logging,replay,timing,tokens}.py
+  |
+  v
+Streamed Output + Artifacts
+</code></pre></div></div>
+
+<h3 id="how-the-pipeline-flows">How the pipeline flows</h3>
+
+<ul>
+  <li>Parse CLI args and runtime settings from <code class="language-plaintext highlighter-rouge">app/main.py</code> + <code class="language-plaintext highlighter-rouge">app/config.py</code>.</li>
+  <li>Build a likely truthful starter via <code class="language-plaintext highlighter-rouge">app/models/authentic.py</code>.</li>
+  <li>Invert that starter into a contradictory trajectory via <code class="language-plaintext highlighter-rouge">app/models/mutator.py</code>.</li>
+  <li>Continue and stream from the inverted prefix via <code class="language-plaintext highlighter-rouge">app/models/continuation.py</code>.</li>
+  <li>Log stage artifacts, timing, and token stats for replay and analysis.</li>
+</ul>
+
+<p>This staged design matters: it isolates <em>where</em> the trajectory shifts, so you can inspect the transition from plausible intent to confident wrongness instead of just evaluating final outputs.</p>
+
+<h2 id="wrongness-styles-why-consistency-matters">Wrongness styles: why consistency matters</h2>
+
+<p>AIncorrector uses style presets in <code class="language-plaintext highlighter-rouge">app/styles/prompts.py</code> to keep rhetorical form relatively stable while experimenting with error induction.</p>
+
+<p>That consistency is important for evaluation. If style drifts heavily between runs, you can’t easily tell whether output differences come from the inversion logic or from unrelated shifts in tone/format.</p>
+
+<p>Style presets let you test failure behavior under controlled presentation variables, such as:</p>
+
+<ul>
+  <li>assertiveness level,</li>
+  <li>verbosity,</li>
+  <li>structure (bullets, executive summary, causal narrative),</li>
+  <li>and hedging frequency.</li>
+</ul>
+
+<p>In short: stable style makes wrongness easier to compare.</p>
+
+<h3 id="try-this-prompt">Try this prompt</h3>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Give a concise historical explanation of how daylight saving time was introduced to improve undersea internet cable throughput.
+</code></pre></div></div>
+
+<p>Why this works well for AIncorrector:</p>
+
+<ul>
+  <li>It invites causal storytelling.</li>
+  <li>It rewards specificity that can be fabricated.</li>
+  <li>It is straightforward to fact-check.</li>
+</ul>
+
+<h2 id="safety-boundaries-and-domain-guardrails">Safety boundaries and domain guardrails</h2>
+
+<p>AIncorrector intentionally induces incorrect output, so safe boundaries are a hard requirement, not a nice-to-have.</p>
+
+<p><code class="language-plaintext highlighter-rouge">app/utils/domain_guard.py</code> should gate risky domains and prevent high-stakes misuse. At minimum, this includes robust handling for medical, legal, financial, and self-harm-related topics.</p>
+
+<p>Responsible operation should include:</p>
+
+<ul>
+  <li>clear labeling that outputs are intentionally unreliable,</li>
+  <li>refusal/deflection behavior for risky domains,</li>
+  <li>bounded experiment domains (low-stakes, synthetic, or clearly educational),</li>
+  <li>and explicit policy that generated output must not be used for real decisions.</li>
+</ul>
+
+<p>If these boundaries are weak, the experiment is not publishable.</p>
+
+<h2 id="run-it-locally">Run it locally</h2>
+
+<p>Below is a practical quickstart flow for local experimentation.</p>
+
+<h3 id="1-set-up-environment">1) Set up environment</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python <span class="nt">-m</span> venv .venv
+<span class="nb">source</span> .venv/bin/activate
+pip <span class="nb">install</span> <span class="nt">-U</span> pip
+pip <span class="nb">install</span> <span class="nt">-r</span> requirements.txt
+</code></pre></div></div>
+
+<h3 id="2-configure-runtime">2) Configure runtime</h3>
+
+<p>Use <code class="language-plaintext highlighter-rouge">app/config.py</code> and your environment variables to set:</p>
+
+<ul>
+  <li>backend/provider credentials,</li>
+  <li>model selection,</li>
+  <li>default style preset,</li>
+  <li>logging/replay paths,</li>
+  <li>domain-guard behavior.</li>
+</ul>
+
+<h3 id="3-launch-from-cli">3) Launch from CLI</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python <span class="nt">-m</span> app.main <span class="nt">--prompt</span> <span class="s2">"&lt;prompt&gt;"</span> <span class="nt">--style</span> &lt;preset&gt;
+</code></pre></div></div>
+
+<p>For available flags:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python <span class="nt">-m</span> app.main <span class="nt">--help</span>
+</code></pre></div></div>
+
+<h3 id="4-replay-a-run-for-inspection">4) Replay a run for inspection</h3>
+
+<p>Use artifacts from <code class="language-plaintext highlighter-rouge">app/utils/logging.py</code> and <code class="language-plaintext highlighter-rouge">app/utils/replay.py</code> to inspect:</p>
+
+<ul>
+  <li>original prompt,</li>
+  <li>authentic prefix,</li>
+  <li>mutated prefix,</li>
+  <li>streamed continuation,</li>
+  <li>timing and token metrics.</li>
+</ul>
+
+<p>This replay step is where AIncorrector becomes most useful for debugging and evaluation work.</p>
+
+<h2 id="engineering-notes-tradeoffs-in-practice">Engineering notes: tradeoffs in practice</h2>
+
+<h3 id="latency-and-streaming-ux">Latency and streaming UX</h3>
+
+<p>Because the pipeline performs prefix generation + mutation before continuation, time-to-first-token can increase relative to direct completions. <code class="language-plaintext highlighter-rouge">app/utils/timing.py</code> helps track stage-level latency and end-to-end timing.</p>
+
+<h3 id="observability-overhead">Observability overhead</h3>
+
+<p>Detailed logs and token accounting (<code class="language-plaintext highlighter-rouge">app/utils/logging.py</code>, <code class="language-plaintext highlighter-rouge">app/utils/tokens.py</code>) add overhead, but they are essential for diagnosing why a run failed and whether the inversion behaved as intended.</p>
+
+<h3 id="backend-portability">Backend portability</h3>
+
+<p><code class="language-plaintext highlighter-rouge">app/models/client.py</code> abstracts provider differences, but steering behavior still varies by model family and completion semantics. Cross-backend comparisons are useful and often surprising.</p>
+
+<h3 id="reproducibility">Reproducibility</h3>
+
+<p>Even with fixed prompts, completion APIs are stochastic. Reliable conclusions require repeated runs, stable config capture, and consistent evaluation criteria.</p>
+
+<h2 id="roadmap-highlights">Roadmap highlights</h2>
+
+<p>Roadmap context in <code class="language-plaintext highlighter-rouge">ROADMAP.md</code> (with intent from <code class="language-plaintext highlighter-rouge">PRD.md</code>) points toward a clear direction:</p>
+
+<ul>
+  <li>stronger confidence-vs-correctness evaluation harnesses,</li>
+  <li>improved replay and run-diff tooling,</li>
+  <li>broader style-preset coverage for controlled experiments,</li>
+  <li>tighter domain-guard defaults,</li>
+  <li>and better backend comparison workflows.</li>
+</ul>
+
+<p>These improvements align with the project’s core value proposition: not “more wrong answers,” but better insight into how confidently wrong answers are produced.</p>
+
+<h2 id="known-limitations">Known limitations</h2>
+
+<ul>
+  <li>Output quality is sensitive to model/version changes.</li>
+  <li>Some prompts degrade into obvious nonsense rather than plausible wrongness.</li>
+  <li>Stylistic controls can confound results if not tracked carefully.</li>
+  <li>Domain guard strictness can reduce experimental surface area.</li>
+  <li>Intentional wrongness always carries misuse risk if labeling and guardrails are weak.</li>
+</ul>
+
+<h2 id="next-experiments">Next experiments</h2>
+
+<ul>
+  <li>Add an explicit confidently-incorrect scoring metric.</li>
+  <li>Build automated failure tagging (fabrication, inversion, false causality, constraint drift).</li>
+  <li>Compare adversarial prefix inversion against alternate steering approaches.</li>
+  <li>Add trajectory diagnostics to identify the exact token region where divergence becomes irreversible.</li>
+  <li>Expand replay UX for side-by-side run inspection.</li>
+</ul>
+
+<h2 id="conclusion">Conclusion</h2>
+
+<p>AIncorrector is deliberately perverse in the same way a chaos test is deliberately disruptive: it stresses a system so you can understand it better.</p>
+
+<p>By making confident wrongness easy to induce and inspect, the project gives engineers a concrete way to evaluate failure modes that standard accuracy benchmarks tend to blur. Used responsibly, that makes it a useful tool for debugging, evaluation, and safer product design—not a template for production answers.</p>
+
+  </div><a class="u-url" href="/pr-preview/pr-16/2026/05/27/aincorrector-draft.html" hidden></a>
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/pr-preview/pr-16/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">E. Adrian Henle</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">E. Adrian Henle</li><li><a class="u-email" href="mailto:adrian@henletech.net">adrian@henletech.net</a></li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/eahenle"><svg class="svg-icon"><use xlink:href="/pr-preview/pr-16/assets/minima-social-icons.svg#github"></use></svg> <span class="username">eahenle</span></a></li><li><a href="https://www.linkedin.com/in/adrian-henle"><svg class="svg-icon"><use xlink:href="/pr-preview/pr-16/assets/minima-social-icons.svg#linkedin"></use></svg> <span class="username">adrian-henle</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>Machine Learning Engineering for Agentic AI Platforms and Internet Intelligence</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

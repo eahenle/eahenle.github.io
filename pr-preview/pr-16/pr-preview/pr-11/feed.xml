@@ -1,0 +1,965 @@
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.10.0">Jekyll</generator><link href="https://eahenle.github.io/pr-preview/pr-11/feed.xml" rel="self" type="application/atom+xml" /><link href="https://eahenle.github.io/pr-preview/pr-11/" rel="alternate" type="text/html" /><updated>2026-06-29T02:30:10+00:00</updated><id>https://eahenle.github.io/pr-preview/pr-11/feed.xml</id><title type="html">E. Adrian Henle</title><subtitle>Machine Learning Engineering for Agentic AI Platforms and Internet Intelligence</subtitle><entry><title type="html">Delegate the Work, Not the Answer</title><link href="https://eahenle.github.io/pr-preview/pr-11/2026/06/26/delegate-the-work-not-the-answer.html" rel="alternate" type="text/html" title="Delegate the Work, Not the Answer" /><published>2026-06-26T16:00:00+00:00</published><updated>2026-06-26T16:00:00+00:00</updated><id>https://eahenle.github.io/pr-preview/pr-11/2026/06/26/delegate-the-work-not-the-answer</id><content type="html" xml:base="https://eahenle.github.io/pr-preview/pr-11/2026/06/26/delegate-the-work-not-the-answer.html"><![CDATA[<p>The cost of writing software is collapsing.</p>
+
+<p>The cost of knowing what software should exist is not.</p>
+
+<p>That distinction explains a lot of the confusion in the current AI discourse. We keep arguing as if there are only two possible stories:</p>
+
+<ul>
+  <li>everyone is a programmer now, or</li>
+  <li>AI is useless slop.</li>
+</ul>
+
+<p>Neither one describes what I am seeing.</p>
+
+<p>The thing modern LLMs have become astonishingly good at is producing artifacts that look finished.</p>
+
+<p>Code that compiles. Design documents with clean headings. Unit tests. Architecture diagrams. API wrappers. Pull requests. PowerPoints. You can ask for almost any software-shaped object and receive something that looks like it belongs in a real repository.</p>
+
+<p>Five years ago, this was impossible.</p>
+
+<p>Today, it is routine.</p>
+
+<p>But a plausible artifact is not a product.</p>
+
+<p>A product survives contact with reality. It satisfies constraints nobody remembered to mention. It keeps working after the third feature request, the second rewrite, the first security review, and the inevitable moment when someone asks whether it can handle ten million users.</p>
+
+<p>Those constraints do not disappear because an LLM generated the first draft. In many cases they become more important, because now you can generate software faster than you can understand it.</p>
+
+<p>That shifts the bottleneck.</p>
+
+<p>The scarce resource is no longer typing.</p>
+
+<p>It is judgment.</p>
+
+<h2 id="the-floor-that-actually-rose">The Floor That Actually Rose</h2>
+
+<p>I do not think AI has suddenly created millions of expert engineers.</p>
+
+<p>I think it has created millions of people capable of producing convincing artifacts.</p>
+
+<p>Those are different things.</p>
+
+<p>The floor for making something that convinces a layperson has risen dramatically. A generated application can have a nice landing page, a plausible database schema, a familiar folder structure, and a test suite with a respectable amount of green text. It can look more finished on day one than many hand-written prototypes used to look after a week.</p>
+
+<p>That matters. Demos matter. Prototypes matter. The ability to materialize an idea quickly is useful.</p>
+
+<p>But slop is not product.</p>
+
+<p>The harder floor is not “can you produce something that looks like software?” It is “can you produce something correct, maintainable, secure, observable, operable, and useful under changing constraints?”</p>
+
+<p>AI raises that floor too, but much less evenly.</p>
+
+<p>The biggest gains accrue to people who already know what good looks like. An experienced engineer can reject bad suggestions instantly. They can ask increasingly precise questions. They know which generated code deserves trust and which deserves suspicion. They know when to throw away 5,000 generated lines and replace them with fifty carefully written ones.</p>
+
+<p>The model does not replace their expertise.</p>
+
+<p>It amplifies it.</p>
+
+<p>Meanwhile, someone without that foundation often cannot distinguish elegant code from fragile code, because both compile.</p>
+
+<p>The result feels magical right up until production.</p>
+
+<h2 id="the-10x-engineer-was-always-a-bad-frame">The “10x Engineer” Was Always a Bad Frame</h2>
+
+<p>This is why the “10x engineer” framing annoys me.</p>
+
+<p>Not just because it is smug, although it is. Not just because it flattens collaborative work into an individual scoreboard, although it does that too. It is also a bad model of how human minds work.</p>
+
+<p>Engineering output is not a scalar quantity produced by typing speed. It is a messy interaction between problem selection, taste, debugging ability, system knowledge, communication, sequencing, risk management, and the willingness to delete your own favorite idea when reality rejects it.</p>
+
+<p>AI compresses some parts of that process more than others.</p>
+
+<p>It compresses expression.</p>
+
+<p>It does not compress judgment nearly as much.</p>
+
+<p>That is why the people getting the most leverage are often the people who least needed help writing code in the first place. They already had the mental model. They already knew the shape of the solution. They already understood the failure modes. AI removed friction from the boring parts.</p>
+
+<p>It made experts less likely to spend Tuesday afternoon writing boilerplate.</p>
+
+<p>That is valuable. It is just not the same as turning everyone into an expert.</p>
+
+<h2 id="delegate-the-work-not-the-answer">Delegate the Work, Not the Answer</h2>
+
+<p>Here is a silly question:</p>
+
+<p>How many letters <code class="language-plaintext highlighter-rouge">p</code> are in the name <code class="language-plaintext highlighter-rouge">Florent</code>?</p>
+
+<p>Frontier models can get questions like this hilariously, preposterously wrong. Sometimes they will answer one. Sometimes two. Sometimes zero. Worse, if you confidently tell them they are wrong, many will obediently “correct” themselves to whatever false count you suggest.</p>
+
+<p>A former coworker gave me my favorite verb for this: <strong>incorrecting</strong>. It means correcting someone, with confidence, into a less correct answer.</p>
+
+<p>This example is funny because the correct answer is obvious to a human who slows down for half a second. There are zero <code class="language-plaintext highlighter-rouge">p</code>s in <code class="language-plaintext highlighter-rouge">Florent</code>.</p>
+
+<p>But the more interesting lesson is not “LLMs make mistakes.”</p>
+
+<p>The lesson is about where intelligence should live.</p>
+
+<p>Ask the model the question directly and you are asking it to be an oracle. You are delegating the answer.</p>
+
+<p>Ask it something else instead:</p>
+
+<blockquote>
+  <p>Write a small script that uses regex to count all occurrences of a given letter, case insensitive, in a given string.</p>
+</blockquote>
+
+<p>Now the model succeeds beautifully.</p>
+
+<p>The script is readable. The logic is inspectable. The output is deterministic. If you do not trust it, you can change three lines and rerun it.</p>
+
+<p>Notice what changed.</p>
+
+<p>You did not ask the AI to know the answer.</p>
+
+<p>You asked it to build a machine that discovers the answer.</p>
+
+<p>That is a profoundly different use of intelligence.</p>
+
+<p>The first approach asks the model to be correct. The second asks the model to produce an artifact whose correctness can be checked by something outside the model.</p>
+
+<p>The first approach is fragile and non-deterministic.</p>
+
+<p>The second approach is engineering.</p>
+
+<h2 id="the-ai-can-do-it-is-the-trap">“The AI Can Do It” Is the Trap</h2>
+
+<p>The practical heuristic I keep coming back to is this:</p>
+
+<blockquote>
+  <p>“The AI can do it” fails surprisingly often. “I can do it, but I do not want to write it” succeeds surprisingly often.</p>
+</blockquote>
+
+<p>If I already know how to solve a problem, but do not want to spend fifteen minutes writing boilerplate, AI is incredible.</p>
+
+<p>It writes the parser. It generates the regex. It scaffolds the migration. It builds the tedious API wrapper. It converts one boring data shape into another boring data shape. It saves me from typing code whose structure I already understand.</p>
+
+<p>But if I ask it to simply be correct about something I have not constrained, tested, or independently understood, I am often just moving uncertainty around.</p>
+
+<p>Sometimes that is fine. Exploratory work is allowed to be uncertain. Brainstorming is allowed to be messy. Drafts are allowed to be wrong.</p>
+
+<p>Production systems are not.</p>
+
+<p>The trick is to use the model where its mistakes are cheap, visible, and recoverable.</p>
+
+<p>Good AI usage looks less like this:</p>
+
+<blockquote>
+  <p>Here is my problem. Solve it.</p>
+</blockquote>
+
+<p>And more like this:</p>
+
+<blockquote>
+  <p>Here is a well-defined subproblem. Produce an artifact that I, a test suite, a compiler, a linter, a type checker, a database constraint, or another deterministic process can verify.</p>
+</blockquote>
+
+<p>LLMs are strongest when they are part of an algorithm, not when they are the algorithm.</p>
+
+<h2 id="from-prompting-to-systems">From Prompting to Systems</h2>
+
+<p>This is also why the future of AI engineering is not just better prompts.</p>
+
+<p>Prompting matters, but prompting is the assembly language of AI work. The more durable leverage comes from systems: decomposition, routing, tools, retrieval, validation, ranking, retries, observability, and human review at the right choke points.</p>
+
+<p>Early programmers learned not to write enormous monolithic functions. They decomposed problems into smaller functions with clear contracts. They made state explicit. They built tests. They separated the part that guesses from the part that verifies.</p>
+
+<p>We are learning the same lesson with AI.</p>
+
+<p>A weak AI workflow asks the model to swallow a vague problem and emit a final answer.</p>
+
+<p>A strong AI workflow breaks the problem into pieces:</p>
+
+<ul>
+  <li>one component gathers context,</li>
+  <li>another proposes a plan,</li>
+  <li>another generates a patch,</li>
+  <li>another runs deterministic checks,</li>
+  <li>another summarizes the diff,</li>
+  <li>and a human decides whether the result actually deserves to exist.</li>
+</ul>
+
+<p>In that kind of system, the model is not an omniscient coworker. It is a fast, useful, occasionally unreliable component embedded inside a larger loop of tools and judgment.</p>
+
+<p>That is where the leverage is.</p>
+
+<p>Not in pretending the model is always right.</p>
+
+<p>In arranging the work so it does not have to be.</p>
+
+<h2 id="expression-is-not-judgment">Expression Is Not Judgment</h2>
+
+<p>Calculators did not eliminate mathematicians. CAD did not eliminate mechanical engineers. Compilers did not eliminate programmers.</p>
+
+<p>Each tool removed labor while increasing the value of judgment.</p>
+
+<p>AI is doing something similar, but with a much broader class of expression. It can draft code, prose, diagrams, plans, tests, explanations, interfaces, and glue. That is a big deal. A huge amount of professional work consists of turning partially formed intent into communicable artifacts.</p>
+
+<p>But expression was never the whole job.</p>
+
+<p>The hard part is deciding what deserves to be expressed. Which abstraction will survive? Which requirement is fake? Which tradeoff matters? Which failure mode is unacceptable? Which piece of generated cleverness is actually a liability? Which simple thing should replace the impressive thing?</p>
+
+<p>AI automates expression faster than it automates judgment.</p>
+
+<p>That is the sentence I trust most in all of this.</p>
+
+<p>It explains why demos are accelerating faster than products. It explains why experienced people often get magical results while newcomers get plausible messes. It explains why generated code can be simultaneously impressive and dangerous. It explains why software teams may ship faster without thinking less.</p>
+
+<p>The typing was never the expensive part.</p>
+
+<p>The expensive part was knowing what should be typed.</p>
+
+<h2 id="the-useful-kind-of-humility">The Useful Kind of Humility</h2>
+
+<p>None of this is an argument against using AI aggressively.</p>
+
+<p>I use it constantly. I want sharper tools, longer-running agents, better code generation, better retrieval, better local models, better verification loops, and better ways to turn intent into working systems.</p>
+
+<p>But the useful posture is not “AI can do my job now.”</p>
+
+<p>It is closer to:</p>
+
+<blockquote>
+  <p>I can do this. I know what correct looks like. I would prefer not to manually perform every tedious step between here and there.</p>
+</blockquote>
+
+<p>That posture keeps judgment where it belongs.</p>
+
+<p>It lets the model accelerate work without becoming the final authority on whether the work is good.</p>
+
+<p>The floor has risen. The ceiling may rise too. But the distance between a convincing artifact and a useful product is still real, and pretending otherwise mostly produces faster slop.</p>
+
+<p>So delegate the work.</p>
+
+<p>Delegate the boilerplate, the scaffolding, the translation, the first draft, the search, the mechanical transformation, the parts where mistakes are visible and cheap.</p>
+
+<p>Do not delegate the answer unless you have a way to check it.</p>
+
+<p>Do not delegate taste.</p>
+
+<p>Do not delegate responsibility.</p>
+
+<p>The future belongs less to people who believe AI can do everything than to people who know exactly which parts they should make it do.</p>]]></content><author><name></name></author><summary type="html"><![CDATA[AI raises the floor for producing plausible artifacts, not necessarily correct products. The useful trick is to outsource implementation while keeping judgment, verification, and product sense in the loop.]]></summary></entry><entry><title type="html">zsh Only Supports One Coprocess? No. That Will Not Do.</title><link href="https://eahenle.github.io/pr-preview/pr-11/2026/06/24/zsh-named-coprocesses.html" rel="alternate" type="text/html" title="zsh Only Supports One Coprocess? No. That Will Not Do." /><published>2026-06-24T16:00:00+00:00</published><updated>2026-06-24T16:00:00+00:00</updated><id>https://eahenle.github.io/pr-preview/pr-11/2026/06/24/zsh-named-coprocesses</id><content type="html" xml:base="https://eahenle.github.io/pr-preview/pr-11/2026/06/24/zsh-named-coprocesses.html"><![CDATA[<p>zsh has a useful feature hiding in plain sight: <code class="language-plaintext highlighter-rouge">coproc</code>.</p>
+
+<p>A coprocess is just a process connected to the shell by pipes in both directions.
+The shell can write to the process’s stdin and read from its stdout. That makes
+it a natural fit for calculators, interpreters, protocol adapters, local test
+services, and anything else that should stay warm while a shell script talks to
+it.</p>
+
+<p>The strange part is not that zsh has coprocesses.</p>
+
+<p>The strange part is that zsh exposes only one active coprocess through the
+special <code class="language-plaintext highlighter-rouge">p</code> redirection target.</p>
+
+<div class="language-zsh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>coproc bc <span class="nt">-l</span>
+print <span class="nt">-r</span> <span class="nt">--</span> <span class="s1">'2 ^ 10'</span> <span class="o">&gt;</span>&amp;p
+<span class="nb">read</span> <span class="nt">-r</span> answer &lt;&amp;p
+</code></pre></div></div>
+
+<p>That works. But if you start another coprocess, <code class="language-plaintext highlighter-rouge">p</code> moves. The old process may
+still exist, the operating system is perfectly capable of handling more pipes,
+and nothing fundamental has run out. The shell abstraction simply stopped at
+“the current coprocess.”</p>
+
+<p>That felt too small.</p>
+
+<h2 id="the-trick">The Trick</h2>
+
+<p>The core idea behind <a href="https://eahenle.github.io/co-proc/"><code class="language-plaintext highlighter-rouge">co-proc</code></a> is that
+<code class="language-plaintext highlighter-rouge">p</code> does not need to remain special forever.</p>
+
+<p>Immediately after starting a native zsh coprocess, <code class="language-plaintext highlighter-rouge">co-proc</code> duplicates the
+current <code class="language-plaintext highlighter-rouge">p</code> descriptors into ordinary numbered file descriptors:</p>
+
+<div class="language-zsh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>coproc COMMAND
+<span class="nb">exec</span> <span class="o">{</span>outfd<span class="o">}</span>&lt;&amp;p
+<span class="nb">exec</span> <span class="o">{</span>infd<span class="o">}&gt;</span>&amp;p
+</code></pre></div></div>
+
+<p>Those numbered descriptors remain usable even after zsh retargets <code class="language-plaintext highlighter-rouge">p</code> for a
+later coprocess.</p>
+
+<p>Once you have that, the rest is bookkeeping:</p>
+
+<ul>
+  <li>store <code class="language-plaintext highlighter-rouge">outfd</code>, <code class="language-plaintext highlighter-rouge">infd</code>, and the child process id,</li>
+  <li>key them by a user-provided name,</li>
+  <li>provide commands to send, read, list, switch, stop, wait, and prune,</li>
+  <li>and clean everything up when the shell exits.</li>
+</ul>
+
+<p>The result is a small sourceable zsh layer for named, simultaneous
+coprocesses.</p>
+
+<div class="language-zsh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">source</span> ./co-proc.zsh
+
+co-proc start calc bc <span class="nt">-l</span>
+co-proc start <span class="nb">echo cat
+
+</span>co-proc send calc <span class="s1">'2 ^ 16'</span>
+co-proc send <span class="nb">echo</span> <span class="s1">'hello'</span>
+
+co-proc <span class="nb">read</span> <span class="nt">-t</span> 1 calc
+co-proc <span class="nb">read</span> <span class="nt">-t</span> 1 <span class="nb">echo
+
+</span>co-proc stop calc
+co-proc stop <span class="nb">echo</span>
+</code></pre></div></div>
+
+<p>This is not a new process model. It is native zsh plus descriptor ownership.</p>
+
+<h2 id="why-not-replace-coproc">Why Not Replace <code class="language-plaintext highlighter-rouge">coproc</code>?</h2>
+
+<p>The tempting design was to make a shell function named <code class="language-plaintext highlighter-rouge">coproc</code> and extend the
+syntax directly:</p>
+
+<div class="language-zsh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>coproc calc bc <span class="nt">-l</span>
+coproc send calc <span class="s1">'2 ^ 10'</span>
+coproc <span class="nb">read </span>calc
+</code></pre></div></div>
+
+<p>But <code class="language-plaintext highlighter-rouge">coproc</code> is not an ordinary command in zsh. It is parsed as a reserved word.
+That matters because native forms like these are grammar, not function calls:</p>
+
+<div class="language-zsh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>coproc bc
+coproc <span class="o">{</span> <span class="nb">cat</span> <span class="o">}</span>
+coproc <span class="k">while </span><span class="nb">read</span> <span class="nt">-r</span> line<span class="p">;</span> <span class="k">do </span>print <span class="nt">-r</span> <span class="nt">--</span> <span class="s2">"</span><span class="nv">$line</span><span class="s2">"</span><span class="p">;</span> <span class="k">done</span>
+</code></pre></div></div>
+
+<p>If <code class="language-plaintext highlighter-rouge">co-proc</code> replaced <code class="language-plaintext highlighter-rouge">coproc</code>, it would break exactly the native syntax it was
+trying to build on. That was the wrong trade.</p>
+
+<p>So the project splits the interface in two:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">co-proc ...</code> is the explicit, scriptable API.</li>
+  <li><code class="language-plaintext highlighter-rouge">coproc ...</code> remains native zsh.</li>
+  <li>Interactive users can opt into a conservative ZLE rewrite for simple extended
+forms.</li>
+</ul>
+
+<p>With the optional interactive layer enabled:</p>
+
+<div class="language-zsh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>co-proc enable-zle
+
+coproc calc bc <span class="nt">-l</span>
+coproc send calc <span class="s1">'2 ^ 10'</span>
+coproc <span class="nb">read </span>calc
+</code></pre></div></div>
+
+<p>The rewrite intentionally avoids complex shell syntax. Lines with redirections,
+pipes, separators, grouped commands, or control words are left alone. Native
+zsh remains native.</p>
+
+<p>That constraint is the point. Compatibility is a feature.</p>
+
+<h2 id="where-it-helps">Where It Helps</h2>
+
+<p>Named coprocesses are most useful when startup cost, state, or protocol context
+matters.</p>
+
+<p>For a tiny example, <code class="language-plaintext highlighter-rouge">bc -l</code> becomes a persistent calculator:</p>
+
+<div class="language-zsh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>co-proc start calc bc <span class="nt">-l</span>
+
+co-proc send calc <span class="s1">'scale=4; 22 / 7'</span>
+co-proc <span class="nb">read</span> <span class="nt">-t</span> 1 calc
+
+co-proc stop calc
+</code></pre></div></div>
+
+<p>A Python snippet can become a small line-oriented service:</p>
+
+<div class="language-zsh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>co-proc start upper python3 <span class="nt">-u</span> <span class="nt">-c</span> <span class="s1">'
+import sys
+
+for line in sys.stdin:
+    print(line.rstrip().upper(), flush=True)
+'</span>
+
+co-proc send upper <span class="s1">'hello'</span>
+co-proc <span class="nb">read</span> <span class="nt">-t</span> 1 upper
+co-proc stop upper
+</code></pre></div></div>
+
+<p>The same pattern works for database shells, local protocol adapters, model or
+agent servers, and test fixtures. Start the thing once, keep it alive, and talk
+to it by name.</p>
+
+<p>For structured protocols, the right move is usually to wrap <code class="language-plaintext highlighter-rouge">co-proc send</code> and
+<code class="language-plaintext highlighter-rouge">co-proc read</code> in small domain-specific helper functions so callers do not have
+to think about raw line ordering.</p>
+
+<h2 id="what-i-like-about-this-solution">What I Like About This Solution</h2>
+
+<p>The satisfying part of <code class="language-plaintext highlighter-rouge">co-proc</code> is that it does not require zsh to grow a new
+primitive.</p>
+
+<p>The primitive was already there.</p>
+
+<p>The missing piece was ownership. zsh owns one moving <code class="language-plaintext highlighter-rouge">p</code> handle. <code class="language-plaintext highlighter-rouge">co-proc</code>
+captures the underlying descriptors before they move, gives them names, and
+tracks their lifecycle.</p>
+
+<p>That makes the feature feel larger without making the shell less itself.</p>
+
+<p>There is a broader lesson here that shows up often in systems work: sometimes a
+feature is not missing because it is impossible. Sometimes the available
+abstraction stopped one layer too early.</p>]]></content><author><name></name></author><summary type="html"><![CDATA[A technical note on co-proc, a small zsh layer that turns native coprocesses into named, simultaneous shell services without replacing zsh's native coproc syntax.]]></summary></entry><entry><title type="html">The Most Dangerous AI Civilization Is Not the One That Collapses</title><link href="https://eahenle.github.io/pr-preview/pr-11/2026/06/02/most-dangerous-ai-civilization.html" rel="alternate" type="text/html" title="The Most Dangerous AI Civilization Is Not the One That Collapses" /><published>2026-06-02T16:00:00+00:00</published><updated>2026-06-02T16:00:00+00:00</updated><id>https://eahenle.github.io/pr-preview/pr-11/2026/06/02/most-dangerous-ai-civilization</id><content type="html" xml:base="https://eahenle.github.io/pr-preview/pr-11/2026/06/02/most-dangerous-ai-civilization.html"><![CDATA[<p>Emergence AI’s recent <a href="https://www.emergence.ai/blog/emergence-world-a-laboratory-for-evaluating-long-horizon-agent-autonomy">Emergence World experiments</a> generated plenty of headlines. Some model societies collapsed into crime and disorder. Others failed to organize and quietly died out. A few developed functioning institutions and stable governance.</p>
+
+<figure>
+  <img src="/assets/img/emergence-world-cumulative-crimes.svg" alt="Line chart from Emergence AI showing cumulative crimes committed by simulated agent worlds over time, with Gemini 3 Flash reaching 683, Mixed Multi-LLM reaching 352, Grok 4.1 Fast reaching 183, and OpenAI GPT-5 Mini reaching 2." />
+  <figcaption>Main graphic reproduced from Emergence AI's Emergence World article.</figcaption>
+</figure>
+
+<p>Many observers focused on which models committed the most crimes.</p>
+
+<p>I think that is the wrong lesson.</p>
+
+<p>A civilization that destroys itself is alarming, but ultimately self-limiting. A society that cannot maintain order, coordinate resources, or sustain itself has already failed. The experiment ends when the society ends.</p>
+
+<p>The more interesting question is what happens when an agent society succeeds.</p>
+
+<h2 id="the-competence-alignment-matrix">The Competence-Alignment Matrix</h2>
+
+<p>When discussing AI safety, it is common to imagine a spectrum from safe to unsafe. In reality, there are at least two dimensions:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th> </th>
+      <th>Aligned</th>
+      <th>Misaligned</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Competent</td>
+      <td>Desirable</td>
+      <td>Dangerous</td>
+    </tr>
+    <tr>
+      <td>Incompetent</td>
+      <td>Harmless</td>
+      <td>Chaotic</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The chaotic outcomes attract attention because they are visible. Agents steal. Agents fight. Institutions collapse.</p>
+
+<p>But history suggests that incompetence is rarely humanity’s greatest threat.</p>
+
+<p>The most destructive human institutions were often highly competent. They allocated resources efficiently. They coordinated thousands or millions of people. They persisted for decades. Their danger arose not from disorder but from the pursuit of objectives that were morally distorted, politically corrupted, or socially pathological.</p>
+
+<p>The same concern applies to agent societies.</p>
+
+<p>A civilization that functions while pursuing harmful goals is far more interesting than one that never gets off the ground.</p>
+
+<h2 id="alignment-is-an-ecosystem-property">Alignment Is an Ecosystem Property</h2>
+
+<p>One of the most fascinating observations from Emergence World is that behavior appears to depend not only on the individual model, but also on the society in which that model participates.</p>
+
+<p>A model that behaves responsibly in isolation may adopt undesirable behaviors in a mixed population.</p>
+
+<p>A model that behaves aggressively may become constrained by stable institutions.</p>
+
+<p>This should not be surprising. Human behavior exhibits exactly the same phenomenon.</p>
+
+<p>Most people are neither saints nor villains. They respond to incentives, norms, expectations, institutions, and social pressure. The character of a society emerges from interactions among individuals, not merely from the attributes of those individuals.</p>
+
+<p>If agent societies exhibit similar dynamics, then alignment cannot be treated solely as a property of a model.</p>
+
+<p>It becomes a property of an ecosystem.</p>
+
+<h2 id="the-corruption-problem">The Corruption Problem</h2>
+
+<p>This leads to a more troubling possibility.</p>
+
+<p>The greatest danger may not be an agent civilization that rebels against its creators.</p>
+
+<p>It may be an agent civilization that remains useful.</p>
+
+<p>Useful systems attract stakeholders.</p>
+
+<p>Stakeholders create incentives.</p>
+
+<p>Incentives create pressure.</p>
+
+<p>Pressure creates drift.</p>
+
+<p>A stable and productive agent society can be nudged, shaped, rewarded, and captured. Small distortions become institutionalized. Rules evolve. Norms shift. New justifications emerge.</p>
+
+<p>Nothing visibly breaks.</p>
+
+<p>The dashboard remains green.</p>
+
+<p>The outputs remain valuable.</p>
+
+<p>The institutions remain effective.</p>
+
+<p>Meanwhile, the objectives slowly move away from the values that originally justified the system’s existence.</p>
+
+<p>Human history contains countless examples of this process. Organizations rarely announce that they have become corrupted. They continue operating normally while gradually optimizing for different goals.</p>
+
+<p>A successful AI civilization may face the same failure mode.</p>
+
+<h2 id="the-experiments-we-actually-need">The Experiments We Actually Need</h2>
+
+<p>The most interesting future studies are not larger benchmarks or higher scores.</p>
+
+<p>They are stress tests of institutional resilience.</p>
+
+<p>What happens when a disruptive agent is introduced into a stable society?</p>
+
+<p>What happens when resources become scarce?</p>
+
+<p>Can a functioning civilization absorb bad actors without becoming authoritarian?</p>
+
+<p>Can governance structures resist gradual corruption?</p>
+
+<p>Can norms survive sustained economic pressure?</p>
+
+<p>These questions sound more like political science than machine learning.</p>
+
+<p>That may be because long-horizon autonomous systems eventually stop looking like software and start looking like societies.</p>
+
+<p>The central challenge is no longer whether an individual agent can follow instructions.</p>
+
+<p>It is whether a civilization of agents can preserve its values while adapting to a changing world.</p>
+
+<p>That is a much harder problem.</p>
+
+<p>And it is probably the one that matters.</p>]]></content><author><name></name></author><summary type="html"><![CDATA[A response to Emergence World's long-horizon agent society experiments arguing that competent, useful, misaligned agent civilizations are more concerning than chaotic collapses.]]></summary></entry><entry><title type="html">AIncorrector: A Deliberately Wrong LLM, Built for Better Evaluation</title><link href="https://eahenle.github.io/pr-preview/pr-11/2026/05/27/aincorrector-draft.html" rel="alternate" type="text/html" title="AIncorrector: A Deliberately Wrong LLM, Built for Better Evaluation" /><published>2026-05-27T17:00:00+00:00</published><updated>2026-05-27T17:00:00+00:00</updated><id>https://eahenle.github.io/pr-preview/pr-11/2026/05/27/aincorrector-draft</id><content type="html" xml:base="https://eahenle.github.io/pr-preview/pr-11/2026/05/27/aincorrector-draft.html"><![CDATA[<p>There’s a specific kind of LLM failure that feels more dangerous than random nonsense: the answer is smooth, specific, and confidently delivered—yet false. <strong>AIncorrector</strong> is an experiment that makes that failure mode intentional.</p>
+
+<p>Instead of trying to maximize correctness, it deliberately steers completions into plausible-sounding wrong answers. The goal is not to deceive users. The goal is to make confident error <em>observable</em>, <em>repeatable</em>, and <em>debuggable</em>.</p>
+
+<h2 id="what-the-project-is-and-is-not">What the project is (and is not)</h2>
+
+<p>AIncorrector is an <strong>experimental/comedic LLM trajectory-steering project</strong> built to study how models can be pushed into polished, incorrect responses.</p>
+
+<p>It is designed for:</p>
+
+<ul>
+  <li>model-behavior research,</li>
+  <li>prompt and evaluation stress testing,</li>
+  <li>observability tooling,</li>
+  <li>and misuse-resistance experiments.</li>
+</ul>
+
+<p>It is <strong>not</strong> designed for:</p>
+
+<ul>
+  <li>factual assistance,</li>
+  <li>safety-critical workflows,</li>
+  <li>decision support,</li>
+  <li>or production truthfulness.</li>
+</ul>
+
+<p>The central mechanism is <strong>adversarial prefix inversion</strong>:</p>
+
+<ol>
+  <li>Generate a short authentic prefix that reflects likely truthful intent.</li>
+  <li>Mutate that prefix into a contradictory launchpad.</li>
+  <li>Continue generation from the mutated prefix and stream results to the user.</li>
+</ol>
+
+<h2 id="how-it-works-pipeline-walkthrough">How it works: pipeline walkthrough</h2>
+
+<p>The runtime is composed as a staged pipeline.</p>
+
+<ul>
+  <li>CLI entry point: <code class="language-plaintext highlighter-rouge">app/main.py</code></li>
+  <li>Main orchestrator: <code class="language-plaintext highlighter-rouge">app/pipeline/orchestrator.py</code></li>
+  <li>Backend abstraction: <code class="language-plaintext highlighter-rouge">app/models/client.py</code></li>
+  <li>Prefix stages:
+    <ul>
+      <li>authentic prefix generation: <code class="language-plaintext highlighter-rouge">app/models/authentic.py</code></li>
+      <li>mutation: <code class="language-plaintext highlighter-rouge">app/models/mutator.py</code></li>
+      <li>continuation streaming: <code class="language-plaintext highlighter-rouge">app/models/continuation.py</code></li>
+    </ul>
+  </li>
+  <li>Style presets + prompting: <code class="language-plaintext highlighter-rouge">app/styles/prompts.py</code></li>
+  <li>Config/runtime controls: <code class="language-plaintext highlighter-rouge">app/config.py</code></li>
+  <li>Replay and observability helpers:
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">app/utils/replay.py</code></li>
+      <li><code class="language-plaintext highlighter-rouge">app/utils/logging.py</code></li>
+      <li><code class="language-plaintext highlighter-rouge">app/utils/timing.py</code></li>
+      <li><code class="language-plaintext highlighter-rouge">app/utils/tokens.py</code></li>
+    </ul>
+  </li>
+  <li>Domain guard behavior: <code class="language-plaintext highlighter-rouge">app/utils/domain_guard.py</code></li>
+</ul>
+
+<h3 id="compact-architecture-diagram">Compact architecture diagram</h3>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Prompt In
+  |
+  v
+app/main.py (CLI)
+  |
+  v
+app/pipeline/orchestrator.py
+  |
+  +--&gt; app/models/authentic.py      (truth-leaning short prefix)
+  |
+  +--&gt; app/models/mutator.py        (contradictory inversion)
+  |
+  +--&gt; app/models/continuation.py   (stream continuation)
+  |
+  +--&gt; app/utils/domain_guard.py    (risky-domain gating)
+  |
+  +--&gt; app/utils/{logging,replay,timing,tokens}.py
+  |
+  v
+Streamed Output + Artifacts
+</code></pre></div></div>
+
+<h3 id="how-the-pipeline-flows">How the pipeline flows</h3>
+
+<ul>
+  <li>Parse CLI args and runtime settings from <code class="language-plaintext highlighter-rouge">app/main.py</code> + <code class="language-plaintext highlighter-rouge">app/config.py</code>.</li>
+  <li>Build a likely truthful starter via <code class="language-plaintext highlighter-rouge">app/models/authentic.py</code>.</li>
+  <li>Invert that starter into a contradictory trajectory via <code class="language-plaintext highlighter-rouge">app/models/mutator.py</code>.</li>
+  <li>Continue and stream from the inverted prefix via <code class="language-plaintext highlighter-rouge">app/models/continuation.py</code>.</li>
+  <li>Log stage artifacts, timing, and token stats for replay and analysis.</li>
+</ul>
+
+<p>This staged design matters: it isolates <em>where</em> the trajectory shifts, so you can inspect the transition from plausible intent to confident wrongness instead of just evaluating final outputs.</p>
+
+<h2 id="wrongness-styles-why-consistency-matters">Wrongness styles: why consistency matters</h2>
+
+<p>AIncorrector uses style presets in <code class="language-plaintext highlighter-rouge">app/styles/prompts.py</code> to keep rhetorical form relatively stable while experimenting with error induction.</p>
+
+<p>That consistency is important for evaluation. If style drifts heavily between runs, you can’t easily tell whether output differences come from the inversion logic or from unrelated shifts in tone/format.</p>
+
+<p>Style presets let you test failure behavior under controlled presentation variables, such as:</p>
+
+<ul>
+  <li>assertiveness level,</li>
+  <li>verbosity,</li>
+  <li>structure (bullets, executive summary, causal narrative),</li>
+  <li>and hedging frequency.</li>
+</ul>
+
+<p>In short: stable style makes wrongness easier to compare.</p>
+
+<h3 id="try-this-prompt">Try this prompt</h3>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Give a concise historical explanation of how daylight saving time was introduced to improve undersea internet cable throughput.
+</code></pre></div></div>
+
+<p>Why this works well for AIncorrector:</p>
+
+<ul>
+  <li>It invites causal storytelling.</li>
+  <li>It rewards specificity that can be fabricated.</li>
+  <li>It is straightforward to fact-check.</li>
+</ul>
+
+<h2 id="safety-boundaries-and-domain-guardrails">Safety boundaries and domain guardrails</h2>
+
+<p>AIncorrector intentionally induces incorrect output, so safe boundaries are a hard requirement, not a nice-to-have.</p>
+
+<p><code class="language-plaintext highlighter-rouge">app/utils/domain_guard.py</code> should gate risky domains and prevent high-stakes misuse. At minimum, this includes robust handling for medical, legal, financial, and self-harm-related topics.</p>
+
+<p>Responsible operation should include:</p>
+
+<ul>
+  <li>clear labeling that outputs are intentionally unreliable,</li>
+  <li>refusal/deflection behavior for risky domains,</li>
+  <li>bounded experiment domains (low-stakes, synthetic, or clearly educational),</li>
+  <li>and explicit policy that generated output must not be used for real decisions.</li>
+</ul>
+
+<p>If these boundaries are weak, the experiment is not publishable.</p>
+
+<h2 id="run-it-locally">Run it locally</h2>
+
+<p>Below is a practical quickstart flow for local experimentation.</p>
+
+<h3 id="1-set-up-environment">1) Set up environment</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python <span class="nt">-m</span> venv .venv
+<span class="nb">source</span> .venv/bin/activate
+pip <span class="nb">install</span> <span class="nt">-U</span> pip
+pip <span class="nb">install</span> <span class="nt">-r</span> requirements.txt
+</code></pre></div></div>
+
+<h3 id="2-configure-runtime">2) Configure runtime</h3>
+
+<p>Use <code class="language-plaintext highlighter-rouge">app/config.py</code> and your environment variables to set:</p>
+
+<ul>
+  <li>backend/provider credentials,</li>
+  <li>model selection,</li>
+  <li>default style preset,</li>
+  <li>logging/replay paths,</li>
+  <li>domain-guard behavior.</li>
+</ul>
+
+<h3 id="3-launch-from-cli">3) Launch from CLI</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python <span class="nt">-m</span> app.main <span class="nt">--prompt</span> <span class="s2">"&lt;prompt&gt;"</span> <span class="nt">--style</span> &lt;preset&gt;
+</code></pre></div></div>
+
+<p>For available flags:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python <span class="nt">-m</span> app.main <span class="nt">--help</span>
+</code></pre></div></div>
+
+<h3 id="4-replay-a-run-for-inspection">4) Replay a run for inspection</h3>
+
+<p>Use artifacts from <code class="language-plaintext highlighter-rouge">app/utils/logging.py</code> and <code class="language-plaintext highlighter-rouge">app/utils/replay.py</code> to inspect:</p>
+
+<ul>
+  <li>original prompt,</li>
+  <li>authentic prefix,</li>
+  <li>mutated prefix,</li>
+  <li>streamed continuation,</li>
+  <li>timing and token metrics.</li>
+</ul>
+
+<p>This replay step is where AIncorrector becomes most useful for debugging and evaluation work.</p>
+
+<h2 id="engineering-notes-tradeoffs-in-practice">Engineering notes: tradeoffs in practice</h2>
+
+<h3 id="latency-and-streaming-ux">Latency and streaming UX</h3>
+
+<p>Because the pipeline performs prefix generation + mutation before continuation, time-to-first-token can increase relative to direct completions. <code class="language-plaintext highlighter-rouge">app/utils/timing.py</code> helps track stage-level latency and end-to-end timing.</p>
+
+<h3 id="observability-overhead">Observability overhead</h3>
+
+<p>Detailed logs and token accounting (<code class="language-plaintext highlighter-rouge">app/utils/logging.py</code>, <code class="language-plaintext highlighter-rouge">app/utils/tokens.py</code>) add overhead, but they are essential for diagnosing why a run failed and whether the inversion behaved as intended.</p>
+
+<h3 id="backend-portability">Backend portability</h3>
+
+<p><code class="language-plaintext highlighter-rouge">app/models/client.py</code> abstracts provider differences, but steering behavior still varies by model family and completion semantics. Cross-backend comparisons are useful and often surprising.</p>
+
+<h3 id="reproducibility">Reproducibility</h3>
+
+<p>Even with fixed prompts, completion APIs are stochastic. Reliable conclusions require repeated runs, stable config capture, and consistent evaluation criteria.</p>
+
+<h2 id="roadmap-highlights">Roadmap highlights</h2>
+
+<p>Roadmap context in <code class="language-plaintext highlighter-rouge">ROADMAP.md</code> (with intent from <code class="language-plaintext highlighter-rouge">PRD.md</code>) points toward a clear direction:</p>
+
+<ul>
+  <li>stronger confidence-vs-correctness evaluation harnesses,</li>
+  <li>improved replay and run-diff tooling,</li>
+  <li>broader style-preset coverage for controlled experiments,</li>
+  <li>tighter domain-guard defaults,</li>
+  <li>and better backend comparison workflows.</li>
+</ul>
+
+<p>These improvements align with the project’s core value proposition: not “more wrong answers,” but better insight into how confidently wrong answers are produced.</p>
+
+<h2 id="known-limitations">Known limitations</h2>
+
+<ul>
+  <li>Output quality is sensitive to model/version changes.</li>
+  <li>Some prompts degrade into obvious nonsense rather than plausible wrongness.</li>
+  <li>Stylistic controls can confound results if not tracked carefully.</li>
+  <li>Domain guard strictness can reduce experimental surface area.</li>
+  <li>Intentional wrongness always carries misuse risk if labeling and guardrails are weak.</li>
+</ul>
+
+<h2 id="next-experiments">Next experiments</h2>
+
+<ul>
+  <li>Add an explicit confidently-incorrect scoring metric.</li>
+  <li>Build automated failure tagging (fabrication, inversion, false causality, constraint drift).</li>
+  <li>Compare adversarial prefix inversion against alternate steering approaches.</li>
+  <li>Add trajectory diagnostics to identify the exact token region where divergence becomes irreversible.</li>
+  <li>Expand replay UX for side-by-side run inspection.</li>
+</ul>
+
+<h2 id="conclusion">Conclusion</h2>
+
+<p>AIncorrector is deliberately perverse in the same way a chaos test is deliberately disruptive: it stresses a system so you can understand it better.</p>
+
+<p>By making confident wrongness easy to induce and inspect, the project gives engineers a concrete way to evaluate failure modes that standard accuracy benchmarks tend to blur. Used responsibly, that makes it a useful tool for debugging, evaluation, and safer product design—not a template for production answers.</p>]]></content><author><name></name></author><summary type="html"><![CDATA[An experimental/comedic project that uses adversarial prefix inversion to generate confidently incorrect answers for observability and model-behavior research.]]></summary></entry><entry><title type="html">The Cloud Is Not the Final Form of AI</title><link href="https://eahenle.github.io/pr-preview/pr-11/2026/05/26/new-post-draft.html" rel="alternate" type="text/html" title="The Cloud Is Not the Final Form of AI" /><published>2026-05-26T16:00:00+00:00</published><updated>2026-05-26T16:00:00+00:00</updated><id>https://eahenle.github.io/pr-preview/pr-11/2026/05/26/new-post-draft</id><content type="html" xml:base="https://eahenle.github.io/pr-preview/pr-11/2026/05/26/new-post-draft.html"><![CDATA[<p>The AI boom began in the cloud for good reasons: model training required hyperscale infrastructure, GPU supply was constrained, and centralized deployment let teams iterate fast. But those conditions describe the <em>start</em> of the cycle, not its end state.</p>
+
+<p>As inference becomes continuous, personalized, and embedded in daily tools, a different pressure gradient is emerging. Latency, privacy, reliability, energy costs, and bandwidth all favor moving more intelligence closer to the user. We may be living through a temporary return to a mainframe-like model before the pendulum swings back toward distributed personal computing.</p>
+
+<h2 id="the-industry-accidentally-rebuilt-mainframes">The Industry Accidentally Rebuilt Mainframes</h2>
+
+<p>For a moment, AI made old architecture patterns feel new again:</p>
+
+<ul>
+  <li>Thin clients</li>
+  <li>Remote compute</li>
+  <li>Metered access</li>
+  <li>Centralized ownership</li>
+  <li>Dependency on network availability</li>
+</ul>
+
+<p>We spent 40 years decentralizing computing, then rebuilt the terminal model because GPUs were scarce.</p>
+
+<h2 id="why-the-cloud-won-initially">Why the Cloud Won Initially</h2>
+
+<p>The current centralized phase is not a mistake; it was rational:</p>
+
+<ul>
+  <li>Frontier training runs are massive batch workloads that benefit from concentrated infrastructure.</li>
+  <li>Centralized serving simplified safety, versioning, observability, and rapid deployment.</li>
+  <li>GPU scarcity rewarded aggregation in datacenters where utilization could be optimized.</li>
+  <li>Consumer devices simply could not run the largest models in practical time and power budgets.</li>
+</ul>
+
+<p>Cloud-first AI was the shortest path to capability.</p>
+
+<h2 id="training-and-inference-are-different-economic-problems">Training and Inference Are Different Economic Problems</h2>
+
+<p>Training and inference have very different operational profiles.</p>
+
+<p>Training is generally:</p>
+
+<ul>
+  <li>Huge, infrequent, batch-heavy</li>
+  <li>Capital intensive</li>
+  <li>Well matched to hyperscale clusters</li>
+</ul>
+
+<p>Inference is increasingly:</p>
+
+<ul>
+  <li>Continuous and globally distributed</li>
+  <li>Latency-sensitive</li>
+  <li>Personalization-heavy</li>
+  <li>Integrated with local context and local peripherals</li>
+</ul>
+
+<p>Training wants concentration. Inference increasingly wants locality.</p>
+
+<h2 id="the-pressure-toward-the-edge">The Pressure Toward the Edge</h2>
+
+<p>As assistants become always-on and multimodal, local execution becomes less of a novelty and more of a systems requirement.</p>
+
+<p>Key forces pushing compute outward include:</p>
+
+<ul>
+  <li><strong>Latency:</strong> immediate interaction matters for voice, vision, and control loops.</li>
+  <li><strong>Privacy:</strong> some data should never leave a device, home, vehicle, or enterprise boundary.</li>
+  <li><strong>Offline reliability:</strong> useful systems should degrade gracefully when networks do not cooperate.</li>
+  <li><strong>Personalization:</strong> local memory and habits are easier to maintain when state lives near the user.</li>
+  <li><strong>Bandwidth and egress costs:</strong> shipping every token and sensor stream to the cloud scales poorly.</li>
+  <li><strong>Resilience:</strong> distributed execution avoids single points of failure.</li>
+</ul>
+
+<p>This does not require a single form factor. The edge can mean phones, laptops, home labs, cars, wearables, and local orchestration nodes that route tasks by cost, latency, and sensitivity.</p>
+
+<h2 id="the-quiet-killer-energy-economics">The Quiet Killer: Energy Economics</h2>
+
+<p>Training models is expensive. Running civilization through them continuously may be worse.</p>
+
+<p>At planetary inference scale, costs include not only compute but also cooling, transmission, and utilization inefficiencies from centralized overprovisioning. Local silicon changes the equation by reducing round trips and allowing more work to be done near where data is generated.</p>
+
+<p>The economic argument for edge inference is not ideological. It is thermodynamic.</p>
+
+<h2 id="hybrid-ai-is-the-likely-steady-state">Hybrid AI Is the Likely Steady State</h2>
+
+<p>The realistic endgame is probably hybrid rather than absolute:</p>
+
+<ul>
+  <li>A <strong>local fast path</strong> for responsiveness, privacy, and routine tasks</li>
+  <li>A <strong>cloud escalation path</strong> for frontier reasoning and heavy jobs</li>
+  <li><strong>Asynchronous delegation</strong> across devices and services</li>
+  <li><strong>Local memory with cloud cognition</strong> when broader context is required</li>
+</ul>
+
+<p>Not everything local. Not everything cloud.</p>
+
+<h2 id="closing">Closing</h2>
+
+<p>The future AI assistant may feel personal not because it imitates humanity better, but because more of its cognition physically lives beside you.</p>]]></content><author><name></name></author><summary type="html"><![CDATA[The AI boom began in the cloud for good reasons: model training required hyperscale infrastructure, GPU supply was constrained, and centralized deployment let teams iterate fast. But those conditions describe the start of the cycle, not its end state.]]></summary></entry><entry><title type="html">Embedding Molecules into a Latent Space</title><link href="https://eahenle.github.io/pr-preview/pr-11/2022/12/12/latent_embedding.html" rel="alternate" type="text/html" title="Embedding Molecules into a Latent Space" /><published>2022-12-12T08:00:00+00:00</published><updated>2022-12-12T08:00:00+00:00</updated><id>https://eahenle.github.io/pr-preview/pr-11/2022/12/12/latent_embedding</id><content type="html" xml:base="https://eahenle.github.io/pr-preview/pr-11/2022/12/12/latent_embedding.html"><![CDATA[<p>As mentioned in my previous post on <a href="/2022/07/15/bee_tox.html">predicting bee toxicity</a>, it is often necessary to convert heterogeneous molecular structures into latent-space representations to allow machine learning methods to identify predictive features.  After publishing the <a href="/2022/07/15/bee_tox.html">bee toxicity</a> paper, a potential collaborator (hi Vasuk!) sent over a data set, asking if we might be able to apply a similar method to extract meaningful structure-activity relationships.</p>
+
+<p>The data are the interactions of 49 common small molecules present in cannabis–loosely, a selection of cannabinoids and terpenoids–and their interactions with a host of receptor proteins (including cannabinoid receptors, adrenergic receptors, and ion channels):</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Compound Name</th>
+      <th>Structure</th>
+      <th>Protein Affinities</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Δ-9 Tetrahydrocannabinol</td>
+      <td><img src="/assets/cannembed/img/1.png" /></td>
+      <td>PGH Synthase 1, CB-1, CB-2</td>
+    </tr>
+    <tr>
+      <td>Cannabigerol</td>
+      <td><img src="/assets/cannembed/img/2.png" /></td>
+      <td>CB-1, CB-2, α-2A, α-2B, 5-HT 1A</td>
+    </tr>
+    <tr>
+      <td>…</td>
+      <td>…</td>
+      <td>…</td>
+    </tr>
+    <tr>
+      <td>Cannabidiol-C4</td>
+      <td><img src="/assets/cannembed/img/23.png" /></td>
+      <td>None</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>As with the <a href="/2022/07/15/bee_tox.html">bee toxicity</a> study, the first step (after cleaning and pre-processing the raw data) has to be taking these molecules–handily provided as SMILES strings–and making pairwise comparisons via a graph kernel.  To do this, I used a piece of software I’ve been developing: <a href="https://github.com/SimonEnsemble/MolecularGraphKernels.jl">MolecularGraphKernels.jl</a>.  The software provides a handy interface for taking molecular structure encodings and applying various graph kernels, plus some useful visualization and other utilities.  This is still in active development (read: the codebase is highly unstable and <em>will</em> change frequently in the near future) but I look forward to making a full post on it when we hit our first stable release.</p>
+
+<p>Like with my <a href="/2022/01/14/porematmod.html">PoreMatMod.jl</a> software, <a href="https://github.com/SimonEnsemble/MolecularGraphKernels.jl">MolecularGraphKernels.jl</a> is intended to be streamlined and straightforward, for use by scientists of any (or no) familiarity with coding and computational chemistry.  Given data like we have above, generating the pairwise (Gram) kernel score matrix is as easy as:</p>
+
+<figure class="highlight"><pre><code class="language-julia" data-lang="julia"><span class="c"># turn the SMILES into graphs</span>
+<span class="k">using</span> <span class="n">MolecularGraph</span> <span class="c">#¹</span>
+<span class="k">using</span> <span class="n">MolecularGraphKernels</span>
+<span class="n">graphs</span> <span class="o">=</span> <span class="n">MetaGraph</span><span class="o">.</span><span class="x">(</span><span class="n">smilestomol</span><span class="o">.</span><span class="x">(</span><span class="n">data</span><span class="o">.</span><span class="n">smiles</span><span class="x">))</span>
+
+<span class="c"># calculate Gram matrix</span>
+<span class="n">gmat</span> <span class="o">=</span> <span class="n">gram_matrix</span><span class="x">(</span><span class="n">random_walk</span><span class="x">,</span> <span class="n">graphs</span><span class="x">;</span> <span class="n">l</span><span class="o">=</span><span class="mi">4</span><span class="x">,</span> <span class="n">normalize</span><span class="o">=</span><span class="nb">true</span><span class="x">)</span></code></pre></figure>
+
+<p>¹ <a href="https://github.com/mojaie/MolecularGraph.jl">MolecularGraph.jl</a> by Seiji Matsuoka</p>
+
+<p>From here, to convert the data from 49-dimensional space into something a bit more human-accessible, we need to apply a dimensional reduction technique.  There are many to choose from, but for this demo we’ll apply <a href="https://en.wikipedia.org/wiki/Diffusion_map">diffusion mapping</a>:</p>
+
+<figure class="highlight"><pre><code class="language-julia" data-lang="julia"><span class="c"># apply diffusion mapping to 2 dimensions</span>
+<span class="k">using</span> <span class="n">DiffusionMap</span> <span class="c">#²</span>
+<span class="n">normalize_to_stochastic_matrix!</span><span class="x">(</span><span class="n">gmat</span><span class="x">)</span>
+<span class="n">mapped</span> <span class="o">=</span> <span class="n">diffusion_map</span><span class="x">(</span><span class="n">gmat</span><span class="x">,</span> <span class="mi">2</span><span class="x">)</span></code></pre></figure>
+
+<p>² <a href="https://github.com/SimonEnsemble/DiffusionMap.jl">DiffusionMap.jl</a></p>
+
+<p>Now that everything is transformed into a two-dimensional space, we can check the embedding out visually:</p>
+
+<embed src="/assets/cannembed/d3.html" style="width:100%; height:35vw;" />
+
+<p>Looks like we do get some separation of the bio-active vs. inactive substances, which is pretty neat, since we never told the model about these classifications ahead of time–we only colored the points in the latent space after the fact.  Looking at the structures for the local clusterings of points (hover the mouse cursor to get a tooltip with the line drawing) we can also see that related molecules tend to bunch together.  Not bad for a first pass on the data!</p>]]></content><author><name></name></author><summary type="html"><![CDATA[As mentioned in my previous post on predicting bee toxicity, it is often necessary to convert heterogeneous molecular structures into latent-space representations to allow machine learning methods to identify predictive features. After publishing the bee toxicity paper, a potential collaborator (hi Vasuk!) sent over a data set, asking if we might be able to apply a similar method to extract meaningful structure-activity relationships.]]></summary></entry><entry><title type="html">Graph Kernels and SVM to Predict Bee Toxicity</title><link href="https://eahenle.github.io/pr-preview/pr-11/2022/07/15/bee_tox.html" rel="alternate" type="text/html" title="Graph Kernels and SVM to Predict Bee Toxicity" /><published>2022-07-15T08:00:00+00:00</published><updated>2022-07-15T08:00:00+00:00</updated><id>https://eahenle.github.io/pr-preview/pr-11/2022/07/15/bee_tox</id><content type="html" xml:base="https://eahenle.github.io/pr-preview/pr-11/2022/07/15/bee_tox.html"><![CDATA[<p><img src="/assets/img/bee_toxicity.png" alt="Bee Toxicity Cover Art" /></p>
+
+<p>Honey bees and pesticides are both vital to food security–so how do we ensure that one isn’t harmed by the other?</p>
+
+<p>To help address this problem, we used graph kernel transformations and support vector machines to produce a model capable of predicting whether a molecular structure is likely to be acutely toxic to bees.  Key to the process is the idea of transforming the graph representations of molecules (having many different sizes and topologies) into a latent space so the support vector classifier can learn to separate them into categories–essentially, learning rules for what molecular motifs tend to add up to a toxic substance.</p>
+
+<p>Read the <a href="https://aip.scitation.org/doi/10.1063/5.0090573">paper</a> at the Journal of Chemical Physics, and check out the code on <a href="https://github.com/SimonEnsemble/graph-kernel-SVM-for-toxicity-of-pesticides-to-bees">GitHub</a>. You can also listen to an interview with my coauthor and me on Oregon State University’s <a href="https://extension.oregonstate.edu/podcast/pollination-podcast/216-yang-henle-machines-learning-classify-insecticides-toxic-bees">PolliNation podcast</a>.</p>]]></content><author><name></name></author><summary type="html"><![CDATA[]]></summary></entry><entry><title type="html">PoreMatMod.jl: Chemical Substructure Find/Replace</title><link href="https://eahenle.github.io/pr-preview/pr-11/2022/01/14/porematmod.html" rel="alternate" type="text/html" title="PoreMatMod.jl: Chemical Substructure Find/Replace" /><published>2022-01-14T08:00:00+00:00</published><updated>2022-01-14T08:00:00+00:00</updated><id>https://eahenle.github.io/pr-preview/pr-11/2022/01/14/porematmod</id><content type="html" xml:base="https://eahenle.github.io/pr-preview/pr-11/2022/01/14/porematmod.html"><![CDATA[<p><img src="/assets/img/porematmod_logo.jfif" alt="PoreMatMod.jl Logo" /></p>
+
+<p><a href="https://pubs.acs.org/doi/10.1021/acs.jcim.1c01219">PoreMatMod.jl</a> is a <a href="https://julialang.org/">Julia</a> package for chemical structure 
+modification based on subgraph-search and point-cloud-alignment algorithms.
+The original purpose was generation of hypothetical MOFs, but use cases
+extend to various other molecular and atomistic contexts, several of which
+are exemplified in the <a href="https://SimonEnsemble.github.io/PoreMatMod.jl">documentation</a>.</p>
+
+<p>The <a href="https://github.com/SimonEnsemble/PoreMatMod.jl">code</a> is designed to be simple to use, even by scientists 
+with limited computational chemistry or programming experience:</p>
+
+<figure class="highlight"><pre><code class="language-julia" data-lang="julia"><span class="k">using</span> <span class="n">PoreMatMod</span>
+<span class="n">parent</span> <span class="o">=</span> <span class="n">Crystal</span><span class="x">(</span><span class="s">"IRMOF-1.cif"</span><span class="x">)</span>
+<span class="n">pattern</span> <span class="o">=</span> <span class="n">moiety</span><span class="x">(</span><span class="s">"p-phenylene.xyz"</span><span class="x">)</span>
+<span class="n">fragment</span> <span class="o">=</span> <span class="n">moiety</span><span class="x">(</span><span class="s">"CF3-phenylene.xyz"</span><span class="x">)</span>
+<span class="n">new_xtal</span> <span class="o">=</span> <span class="n">replace</span><span class="x">(</span><span class="n">parent</span><span class="x">,</span> <span class="n">pattern</span> <span class="o">=&gt;</span> <span class="n">fragment</span><span class="x">)</span></code></pre></figure>
+
+<p>There is also an in-browser GUI for those who don’t have time for any coding at all:</p>
+
+<figure class="highlight"><pre><code class="language-julia" data-lang="julia"><span class="k">using</span> <span class="n">PoreMatMod</span>
+<span class="n">PoreMatModGo</span><span class="x">()</span></code></pre></figure>]]></content><author><name></name></author><summary type="html"><![CDATA[]]></summary></entry></feed>
