@@ -9,9 +9,7 @@ Two psychologists are talking. One says, "I went on a date the other night. We w
 
 The second psychologist laughs. "I had something similar happen, actually. I was having dinner with my mother, and I wanted more pepper. I meant to say, 'Please pass the pepper,' but what came out was, 'You ruined my life, you passive-aggressive bitch.'"
 
-"Please pass the pepper" is the API call. "You ruined my life" is the hidden system prompt. Somewhere between those two versions of a Freudian slip is a real neurolinguistic distinction: slips can be local errors in speech production, but they can also feel like intrusions from a competing semantic field.
-
-That distinction raises a useful question: can a language model have a Freudian slip?
+I love this joke. Told well, it absolutely kills (especially if you're friends with shrinks). It popped into my head today, and led me to an interesting question: can an LLM have a Freudian slip?
 
 ## Every token is a competition
 
@@ -30,7 +28,7 @@ A real slip needs an intrusion.
 
 ## Double entendres are not necessarily slips
 
-Suppose an AI is summarizing breast augmentation surgery and calls the result a "wife expansion pack." The phrase is awful, but it is not necessarily a slip.
+Suppose an AI is summarizing breast augmentation surgery and calls the result a "wife expansion pack." The phrase is crude, but it is not actually a slip.
 
 The words were not incorrectly selected. "Expansion pack" is a coherent, if tasteless, metaphor for adding optional features to something already treated as a product. The joke appears because the phrase has more than one available reading.
 
@@ -62,7 +60,7 @@ Imagine two cooperating models. The first is a text model. Its job is to decide 
 
 The second is a voice model. Its job is to speak that sentence aloud. A conventional text-to-speech system is supposed to be a faithful servant. It receives text, derives pronunciation, and generates audio. Semantic context may affect emphasis, emotion, rhythm, or tone, but it should not alter lexical identity.
 
-For a synthetic Freudian slip, we would deliberately make the reader less reliable.
+For a synthetic Freudian slip, we would deliberately make the reader less reliable. Not artificially, by mis-training it, but by choosing a system architecture naturally amenable to our desired mode of failure.
 
 Instead of mapping text directly to fixed phonemes, the voice model would pass through a latent speech space:
 
@@ -102,7 +100,7 @@ Human speech errors are often organized around phonology:
 
 A phoneme-aware model gives those relationships somewhere to live. It could produce anticipation errors, where a sound from an upcoming word appears too early. It could produce perseveration, where a previous sound refuses to leave. It could generate spoonerisms or hybrid words formed from two competing candidates.
 
-This is also why childish priming games work. Tell someone to say "toast" five times, then ask what you put in a toaster, and the wrong answer is suddenly waiting right beside the right one. The prompt did not make the speaker ignorant. It built a phonological rut.
+This is also why childish priming games work. Tell someone to say "roast" five times, then ask what you put in a toaster, and the wrong answer is suddenly waiting right beside the right one. The prompt did not make the speaker ignorant. It built a phonological rut.
 
 A synthetic slip needs that same kind of local rut, plus one more component: a monitor that can compare what was supposed to be said with what actually came out. In humans, that monitor is partly auditory and partly predictive; in an AI speech system, it could be a separate process that receives both the planned utterance and the generated audio or transcript.
 
@@ -120,7 +118,7 @@ The slip belongs to none of them individually. It emerges from their disagreemen
 
 ## Repression without an unconscious
 
-Of course, the machine still would not possess a Freudian unconscious in the human sense. There would be no buried desire struggling against repression. No childhood grievance would tunnel through the speech apparatus. The model would not secretly lust after the salt shaker.
+Of course, the machine still would not possess a Freudian unconscious in the human sense. There would be no buried desire struggling against repression. No childhood grievance would tunnel through the speech apparatus. The model would not secretly lust after the weather forecasting model on the neighboring server rack.
 
 But it could reproduce the functional structure:
 
