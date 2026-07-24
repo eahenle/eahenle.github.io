@@ -22,7 +22,7 @@ The headline figure is modest but provocative. On Claude-authored PRs, GPT 5.5 r
 | Claude Code | 53.7% (same-model) | 60.0% (cross-model) |
 | Codex | 62.0% (cross-model) | 50.5% (same-model) |
 
-*High-severity-bug recall (P0/P1); values and model labels reproduced from [Greptile’s “Models are worse at reviewing their own code,” Fig. 01](https://www.greptile.com/blog/model-inversion). Attribution does not establish proven authorship: Greptile inferred it from PR metadata.*
+*High-severity-bug recall (P0/P1); values and model labels reproduced from [Greptile’s “Models are worse at reviewing their own code,” Fig. 01](https://www.greptile.com/blog/model-inversion).*
 
 In Greptile’s terminology, each reviewer did better on the other model’s attributed code than on its own. The company has turned that observation into an experimental routing feature: infer the coding agent from PR metadata and send the review to the other model.
 
