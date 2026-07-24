@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.10.0">Jekyll</generator><link href="https://eahenle.github.io/pr-preview/pr-19/feed.xml" rel="self" type="application/atom+xml" /><link href="https://eahenle.github.io/pr-preview/pr-19/" rel="alternate" type="text/html" /><updated>2026-07-23T18:48:42+00:00</updated><id>https://eahenle.github.io/pr-preview/pr-19/feed.xml</id><title type="html">E. Adrian Henle</title><subtitle>Machine Learning Engineering for Agentic AI Platforms and Internet Intelligence</subtitle><entry><title type="html">Model Inversion and the Geometry of Correlated Error</title><link href="https://eahenle.github.io/pr-preview/pr-19/2026/07/23/model-inversion-correlated-error.html" rel="alternate" type="text/html" title="Model Inversion and the Geometry of Correlated Error" /><published>2026-07-23T16:00:00+00:00</published><updated>2026-07-23T16:00:00+00:00</updated><id>https://eahenle.github.io/pr-preview/pr-19/2026/07/23/model-inversion-correlated-error</id><content type="html" xml:base="https://eahenle.github.io/pr-preview/pr-19/2026/07/23/model-inversion-correlated-error.html"><![CDATA[<p>There is a familiar kind of debugging failure. You solve a problem, inspect the solution, inspect it again, and get the same reassuring answer every time: yes, that looks right. Then someone else glances at it and asks the question you never asked. They have not necessarily worked harder. They have simply not inherited the premise that made your solution look inevitable.</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.10.0">Jekyll</generator><link href="https://eahenle.github.io/pr-preview/pr-19/feed.xml" rel="self" type="application/atom+xml" /><link href="https://eahenle.github.io/pr-preview/pr-19/" rel="alternate" type="text/html" /><updated>2026-07-24T05:36:26+00:00</updated><id>https://eahenle.github.io/pr-preview/pr-19/feed.xml</id><title type="html">E. Adrian Henle</title><subtitle>Machine Learning Engineering for Agentic AI Platforms and Internet Intelligence</subtitle><entry><title type="html">Model Inversion and the Geometry of Correlated Error</title><link href="https://eahenle.github.io/pr-preview/pr-19/2026/07/23/model-inversion-correlated-error.html" rel="alternate" type="text/html" title="Model Inversion and the Geometry of Correlated Error" /><published>2026-07-23T16:00:00+00:00</published><updated>2026-07-23T16:00:00+00:00</updated><id>https://eahenle.github.io/pr-preview/pr-19/2026/07/23/model-inversion-correlated-error</id><content type="html" xml:base="https://eahenle.github.io/pr-preview/pr-19/2026/07/23/model-inversion-correlated-error.html"><![CDATA[<p>There is a familiar kind of debugging failure. You solve a problem, inspect the solution, inspect it again, and get the same reassuring answer every time: yes, that looks right. Then someone else glances at it and asks the question you never asked. They have not necessarily worked harder. They have simply not inherited the premise that made your solution look inevitable.</p>
 
 <p>That is a useful intuition pump for a recent <a href="https://www.greptile.com/blog/model-inversion">Greptile experiment on “Model Inversion”</a>. It is not, however, a reason to imagine that a language model trusts its own work, feels ownership of a pull request, or is reluctant to criticize itself. Those are social and psychological explanations. They are the wrong level of description for a code-review policy.</p>
 
@@ -8,7 +8,33 @@
 
 <p>Greptile assembled two historical datasets: 500 pull requests attributed to Claude Code and 500 attributed to Codex. Authorship was inferred from signals such as <code class="language-plaintext highlighter-rouge">Co-authored-by</code> commit trailers, PR-title prefixes, and branch prefixes—not observed directly at generation time. It constructed roughly 1,500 ground-truth comments from sentiment analysis, vote ratios, and git archaeology; excluded style, praise, and documentation comments; then ran Claude Code’s and Codex’s <code class="language-plaintext highlighter-rouge">/review</code> three times per PR. Recall of high-severity bugs was matched to that ground truth by an LLM judge and averaged.</p>
 
-<p>The headline figure is modest but provocative. On Claude-authored PRs, GPT 5.5 recalled 60.0% of the high-severity bugs versus Claude Opus 4.7’s 53.7%. On Codex-authored PRs, Opus recalled 62.0% versus GPT’s 50.5%. In Greptile’s terminology, each reviewer did better on the other model’s attributed code than on its own. The company has turned that observation into an experimental routing feature: infer the coding agent from PR metadata and send the review to the other model.</p>
+<p>The headline figure is modest but provocative. On Claude-authored PRs, GPT 5.5 recalled 60.0% of the high-severity bugs versus Claude Opus 4.7’s 53.7%. On Codex-authored PRs, Opus recalled 62.0% versus GPT’s 50.5%. The matrix makes the crossed comparison explicit:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Author attributed by Greptile</th>
+      <th style="text-align: right">Claude Opus 4.7 review recall</th>
+      <th style="text-align: right">GPT 5.5 review recall</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Claude Code</td>
+      <td style="text-align: right">53.7% (same-model)</td>
+      <td style="text-align: right">60.0% (cross-model)</td>
+    </tr>
+    <tr>
+      <td>Codex</td>
+      <td style="text-align: right">62.0% (cross-model)</td>
+      <td style="text-align: right">50.5% (same-model)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><em>High-severity-bug recall (P0/P1); values and model labels reproduced from <a href="https://www.greptile.com/blog/model-inversion">Greptile’s “Models are worse at reviewing their own code,” Fig. 01</a>. Attribution does not establish proven authorship: Greptile inferred it from PR metadata.</em></p>
+
+<p>In Greptile’s terminology, each reviewer did better on the other model’s attributed code than on its own. The company has turned that observation into an experimental routing feature: infer the coding agent from PR metadata and send the review to the other model.</p>
 
 <p>There are other clues in the article that make the result less mysterious. Greptile reports that Claude-attributed PRs contained a larger share of missing-behavior defects, a category in which GPT had better recall, while Codex-attributed PRs skewed more toward semantic-intent and error-handling issues, where Claude’s recall was stronger. It also reports markedly different review traces: in the sampled runs, Opus spent 59.4% of visible evidence in a broad “scope” phase, whereas GPT spent 82.5% in an “investigate” phase. Those are observations about a particular evaluation setup and model versions, not a timeless taxonomy of model personalities. But they are exactly the sort of differences that can produce complementary blind spots.</p>
 
