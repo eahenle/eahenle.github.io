@@ -15,7 +15,16 @@ The machine version is both less romantic and more useful: **correlated error**.
 
 Greptile assembled two historical datasets: 500 pull requests attributed to Claude Code and 500 attributed to Codex. Authorship was inferred from signals such as `Co-authored-by` commit trailers, PR-title prefixes, and branch prefixes—not observed directly at generation time. It constructed roughly 1,500 ground-truth comments from sentiment analysis, vote ratios, and git archaeology; excluded style, praise, and documentation comments; then ran Claude Code’s and Codex’s `/review` three times per PR. Recall of high-severity bugs was matched to that ground truth by an LLM judge and averaged.
 
-The headline figure is modest but provocative. On Claude-authored PRs, GPT 5.5 recalled 60.0% of the high-severity bugs versus Claude Opus 4.7’s 53.7%. On Codex-authored PRs, Opus recalled 62.0% versus GPT’s 50.5%. In Greptile’s terminology, each reviewer did better on the other model’s attributed code than on its own. The company has turned that observation into an experimental routing feature: infer the coding agent from PR metadata and send the review to the other model.
+The headline figure is modest but provocative. On Claude-authored PRs, GPT 5.5 recalled 60.0% of the high-severity bugs versus Claude Opus 4.7’s 53.7%. On Codex-authored PRs, Opus recalled 62.0% versus GPT’s 50.5%. The matrix makes the crossed comparison explicit:
+
+| Author attributed by Greptile | Claude Opus 4.7 review recall | GPT 5.5 review recall |
+| --- | ---: | ---: |
+| Claude Code | 53.7% (same-model) | 60.0% (cross-model) |
+| Codex | 62.0% (cross-model) | 50.5% (same-model) |
+
+*High-severity-bug recall (P0/P1); values and model labels reproduced from [Greptile’s “Models are worse at reviewing their own code,” Fig. 01](https://www.greptile.com/blog/model-inversion). Attribution does not establish proven authorship: Greptile inferred it from PR metadata.*
+
+In Greptile’s terminology, each reviewer did better on the other model’s attributed code than on its own. The company has turned that observation into an experimental routing feature: infer the coding agent from PR metadata and send the review to the other model.
 
 There are other clues in the article that make the result less mysterious. Greptile reports that Claude-attributed PRs contained a larger share of missing-behavior defects, a category in which GPT had better recall, while Codex-attributed PRs skewed more toward semantic-intent and error-handling issues, where Claude’s recall was stronger. It also reports markedly different review traces: in the sampled runs, Opus spent 59.4% of visible evidence in a broad “scope” phase, whereas GPT spent 82.5% in an “investigate” phase. Those are observations about a particular evaluation setup and model versions, not a timeless taxonomy of model personalities. But they are exactly the sort of differences that can produce complementary blind spots.
 
