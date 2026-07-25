@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "The Room Between the Voices"
-date: 2026-07-25 15:00:00 -0700
+date: 2026-07-25 14:00:00 -0700
 description: "Designing HermanoAgents around timing, selective attention, interruptions, silence, and the operational state of a synthetic group chat."
 ---
 
