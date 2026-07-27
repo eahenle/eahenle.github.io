@@ -1,15 +1,15 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.10.0">Jekyll</generator><link href="https://eahenle.github.io/pr-preview/pr-21/feed.xml" rel="self" type="application/atom+xml" /><link href="https://eahenle.github.io/pr-preview/pr-21/" rel="alternate" type="text/html" /><updated>2026-07-27T19:37:56+00:00</updated><id>https://eahenle.github.io/pr-preview/pr-21/feed.xml</id><title type="html">E. Adrian Henle</title><subtitle>Machine Learning Engineering for Agentic AI Platforms and Internet Intelligence</subtitle><entry><title type="html">Compile Meaning, Not Prose</title><link href="https://eahenle.github.io/pr-preview/pr-21/2026/07/27/compile-meaning-not-prose.html" rel="alternate" type="text/html" title="Compile Meaning, Not Prose" /><published>2026-07-27T12:00:00+00:00</published><updated>2026-07-27T12:00:00+00:00</updated><id>https://eahenle.github.io/pr-preview/pr-21/2026/07/27/compile-meaning-not-prose</id><content type="html" xml:base="https://eahenle.github.io/pr-preview/pr-21/2026/07/27/compile-meaning-not-prose.html"><![CDATA[<h2 id="three-possible-titles">Three possible titles</h2>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.10.0">Jekyll</generator><link href="https://eahenle.github.io/pr-preview/pr-21/feed.xml" rel="self" type="application/atom+xml" /><link href="https://eahenle.github.io/pr-preview/pr-21/" rel="alternate" type="text/html" /><updated>2026-07-27T19:44:52+00:00</updated><id>https://eahenle.github.io/pr-preview/pr-21/feed.xml</id><title type="html">E. Adrian Henle</title><subtitle>Machine Learning Engineering for Agentic AI Platforms and Internet Intelligence</subtitle><entry><title type="html">A Type System for Technical Prose</title><link href="https://eahenle.github.io/pr-preview/pr-21/2026/07/27/a-type-system-for-technical-prose.html" rel="alternate" type="text/html" title="A Type System for Technical Prose" /><published>2026-07-27T12:00:00+00:00</published><updated>2026-07-27T12:00:00+00:00</updated><id>https://eahenle.github.io/pr-preview/pr-21/2026/07/27/a-type-system-for-technical-prose</id><content type="html" xml:base="https://eahenle.github.io/pr-preview/pr-21/2026/07/27/a-type-system-for-technical-prose.html"><![CDATA[<h2 id="three-possible-titles">Three possible titles</h2>
 
 <ol>
-  <li><strong>Compile Meaning, Not Prose</strong><br />
-<em>ASD-STE100 as a target language for reliable AI output</em></li>
   <li><strong>A Type System for Technical Prose</strong><br />
 <em>Separating model reasoning from controlled-language realization</em></li>
+  <li><strong>Compile Meaning, Not Prose</strong><br />
+<em>ASD-STE100 as a target language for reliable AI output</em></li>
   <li><strong>The Model May Think Freely. The Output Must Not.</strong><br />
 <em>Building an auditable AI backend for Simplified Technical English</em></li>
 </ol>
 
-<p><strong>Selected: <em>Compile Meaning, Not Prose</em>.</strong> It states the architectural move directly: preserve semantics first, then render them under enforceable language constraints.</p>
+<p><strong>Selected: <em>A Type System for Technical Prose</em>.</strong> It captures the central assurance argument: controlled technical language should enforce a contract over model output, not merely suggest a style.</p>
 
 <hr />
 
