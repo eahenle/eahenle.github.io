@@ -5,19 +5,6 @@ date: 2026-07-27 12:00:00 +0000
 description: "Treating ASD-STE100 as a target language for AI systems that must be clear, consistent, and auditable."
 ---
 
-## Three possible titles
-
-1. **A Type System for Technical Prose**  
-   *Separating model reasoning from controlled-language realization*
-2. **Compile Meaning, Not Prose**  
-   *ASD-STE100 as a target language for reliable AI output*
-3. **The Model May Think Freely. The Output Must Not.**  
-   *Building an auditable AI backend for Simplified Technical English*
-
-**Selected: _A Type System for Technical Prose_.** It captures the central assurance argument: controlled technical language should enforce a contract over model output, not merely suggest a style.
-
----
-
 Some writing problems improve when a language model becomes more inventive. A story can benefit from an unexpected image. A speech can benefit from rhythm. Even a product essay can benefit from a distinctive voice.
 
 A maintenance procedure is not such a problem.
@@ -64,6 +51,7 @@ steps:
     preconditions:
       - pressure_psi: {operator: less_than, value: 10}
     warning:
+      id: WARNING_1
       hazard: unexpected actuator movement
       prohibition: do_not_continue_if_pressure_is_10_psi_or_more
     postconditions:
