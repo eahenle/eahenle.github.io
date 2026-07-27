@@ -1,19 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.10.0">Jekyll</generator><link href="https://eahenle.github.io/pr-preview/pr-21/feed.xml" rel="self" type="application/atom+xml" /><link href="https://eahenle.github.io/pr-preview/pr-21/" rel="alternate" type="text/html" /><updated>2026-07-27T19:44:52+00:00</updated><id>https://eahenle.github.io/pr-preview/pr-21/feed.xml</id><title type="html">E. Adrian Henle</title><subtitle>Machine Learning Engineering for Agentic AI Platforms and Internet Intelligence</subtitle><entry><title type="html">A Type System for Technical Prose</title><link href="https://eahenle.github.io/pr-preview/pr-21/2026/07/27/a-type-system-for-technical-prose.html" rel="alternate" type="text/html" title="A Type System for Technical Prose" /><published>2026-07-27T12:00:00+00:00</published><updated>2026-07-27T12:00:00+00:00</updated><id>https://eahenle.github.io/pr-preview/pr-21/2026/07/27/a-type-system-for-technical-prose</id><content type="html" xml:base="https://eahenle.github.io/pr-preview/pr-21/2026/07/27/a-type-system-for-technical-prose.html"><![CDATA[<h2 id="three-possible-titles">Three possible titles</h2>
-
-<ol>
-  <li><strong>A Type System for Technical Prose</strong><br />
-<em>Separating model reasoning from controlled-language realization</em></li>
-  <li><strong>Compile Meaning, Not Prose</strong><br />
-<em>ASD-STE100 as a target language for reliable AI output</em></li>
-  <li><strong>The Model May Think Freely. The Output Must Not.</strong><br />
-<em>Building an auditable AI backend for Simplified Technical English</em></li>
-</ol>
-
-<p><strong>Selected: <em>A Type System for Technical Prose</em>.</strong> It captures the central assurance argument: controlled technical language should enforce a contract over model output, not merely suggest a style.</p>
-
-<hr />
-
-<p>Some writing problems improve when a language model becomes more inventive. A story can benefit from an unexpected image. A speech can benefit from rhythm. Even a product essay can benefit from a distinctive voice.</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.10.0">Jekyll</generator><link href="https://eahenle.github.io/pr-preview/pr-21/feed.xml" rel="self" type="application/atom+xml" /><link href="https://eahenle.github.io/pr-preview/pr-21/" rel="alternate" type="text/html" /><updated>2026-07-27T19:57:08+00:00</updated><id>https://eahenle.github.io/pr-preview/pr-21/feed.xml</id><title type="html">E. Adrian Henle</title><subtitle>Machine Learning Engineering for Agentic AI Platforms and Internet Intelligence</subtitle><entry><title type="html">A Type System for Technical Prose</title><link href="https://eahenle.github.io/pr-preview/pr-21/2026/07/27/a-type-system-for-technical-prose.html" rel="alternate" type="text/html" title="A Type System for Technical Prose" /><published>2026-07-27T12:00:00+00:00</published><updated>2026-07-27T12:00:00+00:00</updated><id>https://eahenle.github.io/pr-preview/pr-21/2026/07/27/a-type-system-for-technical-prose</id><content type="html" xml:base="https://eahenle.github.io/pr-preview/pr-21/2026/07/27/a-type-system-for-technical-prose.html"><![CDATA[<p>Some writing problems improve when a language model becomes more inventive. A story can benefit from an unexpected image. A speech can benefit from rhythm. Even a product essay can benefit from a distinctive voice.</p>
 
 <p>A maintenance procedure is not such a problem.</p>
 
@@ -60,6 +45,7 @@
     <span class="na">preconditions</span><span class="pi">:</span>
       <span class="pi">-</span> <span class="na">pressure_psi</span><span class="pi">:</span> <span class="pi">{</span><span class="nv">operator</span><span class="pi">:</span> <span class="nv">less_than</span><span class="pi">,</span> <span class="nv">value</span><span class="pi">:</span> <span class="nv">10</span><span class="pi">}</span>
     <span class="na">warning</span><span class="pi">:</span>
+      <span class="na">id</span><span class="pi">:</span> <span class="s">WARNING_1</span>
       <span class="na">hazard</span><span class="pi">:</span> <span class="s">unexpected actuator movement</span>
       <span class="na">prohibition</span><span class="pi">:</span> <span class="s">do_not_continue_if_pressure_is_10_psi_or_more</span>
     <span class="na">postconditions</span><span class="pi">:</span>
