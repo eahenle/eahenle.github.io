@@ -1,20 +1,20 @@
 ---
 layout: post
-title: "Compile Meaning, Not Prose"
+title: "A Type System for Technical Prose"
 date: 2026-07-27 12:00:00 +0000
 description: "Treating ASD-STE100 as a target language for AI systems that must be clear, consistent, and auditable."
 ---
 
 ## Three possible titles
 
-1. **Compile Meaning, Not Prose**  
-   *ASD-STE100 as a target language for reliable AI output*
-2. **A Type System for Technical Prose**  
+1. **A Type System for Technical Prose**  
    *Separating model reasoning from controlled-language realization*
+2. **Compile Meaning, Not Prose**  
+   *ASD-STE100 as a target language for reliable AI output*
 3. **The Model May Think Freely. The Output Must Not.**  
    *Building an auditable AI backend for Simplified Technical English*
 
-**Selected: _Compile Meaning, Not Prose_.** It states the architectural move directly: preserve semantics first, then render them under enforceable language constraints.
+**Selected: _A Type System for Technical Prose_.** It captures the central assurance argument: controlled technical language should enforce a contract over model output, not merely suggest a style.
 
 ---
 
