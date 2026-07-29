@@ -1,6 +1,10 @@
 title: E. Adrian Henle
+tagline: Henle Tech
 email: adrian@henletech.net
 description: Machine Learning Engineering for Agentic AI Platforms and Internet Intelligence
+url: "https://henletech.net"
+baseurl: ""
+logo: /assets/img/social-preview.svg
 linkedin_username: adrian-henle
 github_username: eahenle
 repository: eahenle/eahenle.github.io
@@ -10,6 +14,38 @@ show_excerpts: true
 
 plugins:
   - jekyll-feed
+  - jekyll-seo-tag
+  - jekyll-sitemap
+
+header_pages:
+  - start-here.md
+  - archive.md
+  - about.md
+
+newsletter:
+  enabled: false
+  action_url:
+  email_field: email
+  method: post
+  title: Get new essays by email
+  description: No content sludge. Only things worth thinking through.
+  hidden_fields: {}
+
+analytics:
+  enabled: false
+  provider:
+  site_id:
+  script_url:
+
+webmaster_verification:
+  google:
+  bing:
+
+defaults:
+  - scope:
+      path: ""
+    values:
+      image: /assets/img/social-preview.svg
 
 exclude:
   - Gemfile
@@ -20,3 +56,8 @@ exclude:
   - USER_CUSTOM_INSTRUCTIONS.md
   - cacert.pem
   - serve.sh
+  - scripts
+  - tests
+  - docs
+  - _distribution
+  - pr-preview

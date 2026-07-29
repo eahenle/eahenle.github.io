@@ -2,3 +2,11 @@ _site
 Gemfile.lock
 vendor/bundle
 .bundle
+
+_distribution/
+_site/
+.bundle/
+vendor/
+
+__pycache__/
+*.py[cod]
