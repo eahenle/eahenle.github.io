@@ -1,0 +1,17 @@
+{% assign newsletter = site.newsletter %}
+<section class="newsletter" aria-labelledby="newsletter-title">
+  <h2 id="newsletter-title">{{ newsletter.title | default: "Get new essays by email" }}</h2>
+  <p>{{ newsletter.description | default: "Occasional essays about systems, models, and engineering judgment." }}</p>
+  {% if newsletter.enabled and newsletter.action_url %}
+    <form action="{{ newsletter.action_url | escape }}" method="{{ newsletter.method | default: 'post' | escape }}">
+      <label for="newsletter-email-{{ include.context | default: 'default' }}">Email address</label>
+      <div class="newsletter-fields">
+        <input id="newsletter-email-{{ include.context | default: 'default' }}" name="{{ newsletter.email_field | default: 'email' | escape }}" type="email" autocomplete="email" required>
+        <button type="submit">Subscribe</button>
+      </div>
+      {% for field in newsletter.hidden_fields %}<input type="hidden" name="{{ field[0] | escape }}" value="{{ field[1] | escape }}">{% endfor %}
+    </form>
+  {% else %}
+    <p><a href="{{ '/feed.xml' | relative_url }}">Subscribe via RSS</a> while the email list is being prepared.</p>
+  {% endif %}
+</section>

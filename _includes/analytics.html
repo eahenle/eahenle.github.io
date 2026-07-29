@@ -1,0 +1,3 @@
+{% if site.analytics.enabled and site.analytics.script_url and site.analytics.site_id %}
+  <script defer data-site="{{ site.analytics.site_id | escape }}" src="{{ site.analytics.script_url | escape }}"></script>
+{% endif %}

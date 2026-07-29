@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+<title id="title">Henle Tech</title><desc id="desc">A restrained network motif beside the Henle Tech name.</desc>
+<rect width="1200" height="630" fill="#fdfdfd"/><g stroke="#2a7ae2" stroke-width="5" fill="none" opacity=".8"><path d="M100 420L240 270l150 90 130-170 140 100"/><circle cx="100" cy="420" r="15"/><circle cx="240" cy="270" r="15"/><circle cx="390" cy="360" r="15"/><circle cx="520" cy="190" r="15"/><circle cx="660" cy="290" r="15"/></g><text x="760" y="290" text-anchor="middle" fill="#111" font-family="system-ui,sans-serif" font-size="84" font-weight="700">Henle Tech</text><text x="760" y="365" text-anchor="middle" fill="#555" font-family="system-ui,sans-serif" font-size="30">Systems · Models · Engineering</text>
+</svg>

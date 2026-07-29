@@ -5,3 +5,7 @@
 layout: home
 list_title: ' '
 ---
+
+Essays and technical projects about agentic systems, engineering judgment,
+software architecture, model behavior, and the occasional unusual piece of
+hardware. **New reader? [Start here](/start-here/).**

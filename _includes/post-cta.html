@@ -1,0 +1,9 @@
+<aside class="post-cta" aria-label="Keep reading">
+  {% include newsletter.html context="post" %}
+  <p><a href="{{ '/start-here/' | relative_url }}">Explore the Start Here guide</a> or <a href="{{ '/feed.xml' | relative_url }}">follow the RSS feed</a>.</p>
+  {% assign related = site.related_posts | where_exp: "post", "post.url != page.url" %}
+  {% if related.size > 0 %}
+  <h2>Continue reading</h2>
+  <ul>{% for post in related limit:2 %}<li><a href="{{ post.url | relative_url }}">{{ post.title }}</a></li>{% endfor %}</ul>
+  {% endif %}
+</aside>

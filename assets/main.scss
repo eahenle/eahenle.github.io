@@ -4,3 +4,13 @@
 $content-width: 75%;
 
 @import "minima";
+
+.site-nav .page-link { white-space: nowrap; }
+.post-navigation { display: flex; justify-content: space-between; gap: 2rem; border-top: 1px solid #e8e8e8; padding-top: 1rem; margin-top: 2rem; }
+.post-navigation a:last-child { margin-left: auto; text-align: right; }
+.post-cta { border-top: 1px solid #d8d8d8; margin-top: 2rem; padding-top: 1.25rem; color: #555; }
+.post-cta h2, .newsletter h2 { font-size: 1.15rem; margin-bottom: .4rem; }
+.newsletter-fields { display: flex; gap: .5rem; max-width: 32rem; }
+.newsletter-fields input { flex: 1; min-width: 10rem; padding: .5rem; }
+.newsletter-fields button { padding: .5rem .9rem; }
+.post-tags { font-size: .9rem; }

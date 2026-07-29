@@ -13,3 +13,19 @@ Example prompt:
 > Use the blog-preview skill to show me this PR's rendered site.
 
 Codex will run `.agents/skills/blog-preview/scripts/preview.sh`, keep the Jekyll server alive in the session, and report the forwarded preview URL.
+
+## Publication tooling
+
+Build the production site with `JEKYLL_ENV=production bundle exec jekyll build`. Run
+`python scripts/validate_site.py` afterward to check canonical metadata, absolute
+social images, internal links, the sitemap, and publication exclusions.
+
+Generate an editable, deterministic launch kit with:
+
+```sh
+python scripts/distribution_kit.py _posts/YYYY-MM-DD-slug.markdown
+```
+
+The output under `_distribution/` is intentionally excluded from Jekyll and Git.
+See [`docs/PUBLISHING.md`](docs/PUBLISHING.md) for newsletter, privacy-respecting
+analytics, webmaster verification, and the repeatable publishing checklist.
