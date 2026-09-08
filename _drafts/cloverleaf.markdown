@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Cloverleaf: The Research Should Continue Into the Paper"
-date: 2026-08-20 09:00:00 -0700
+date: 2026-09-08 09:00:00 -0700
 description: "I wanted to turn an agent-coordinated research project into a paper without leaving the local environment where the work already lived."
 tags: [ai, agents, open-source, latex, local-first]
 ---
@@ -56,6 +56,8 @@ The assistant receives the immediate authoring context: the active workspace and
 
 The browser does not have to guess which files will matter and upload their contents on every turn. The author does not have to paste the whole intellectual history into a new conversation. The project remains the shared context.
 
+There is also a useful middle ground between selecting a paragraph and asking the agent to explore the whole repository. I can explicitly attach up to twenty visible project files to a turn. The browser sends their paths—not a second, potentially stale copy of their contents—and the backend validates those paths and reads the authoritative files before calling Codex. That makes it easy to say, in effect, “revise this section with this result, this table, and these notes in view,” while keeping file access inside the same workspace boundary. The attachment picker clears after the message is sent, so each bundle of extra context is an intentional part of a particular request rather than ambient context that silently accumulates.
+
 This is a small architectural difference with a large experiential effect. I can ask a question about the paper and continue the same kind of collaboration I used during the investigation: inspect the work, establish what is true, then make the artifact better.
 
 ## The response should be an edit
@@ -71,6 +73,8 @@ The backend validates every proposed path against the workspace boundary. Each o
 
 Only my confirmation writes the change.
 
+Confirmed changes also become local Git checkpoints. Cloverleaf initializes a repository for a project that does not already have one, establishes a baseline where necessary, and commits only the precise paths changed by the confirmed operation. It leaves unrelated staged work and existing ignore rules alone, and it never contacts a remote. The review card is therefore not the only record of what the agent changed; the manuscript itself keeps a local, inspectable history.
+
 This avoids the strange middle ground where an “integrated” assistant still responds with a large LaTeX block that I must manually transplant into the real document. If I ask the agent to state the contribution earlier, completion means a reviewable change against the introduction—not suggested wording floating in a transcript.
 
 It also protects the live writing loop. If I keep typing while the agent works, its proposal is based on an older file. The version check rejects the stale edit rather than overwriting newer work. If a request needs several files, Cloverleaf validates the entire accepted set before writing any of them, applies the set together, and compiles once.
@@ -82,6 +86,8 @@ The useful asymmetry is this: **the agent can read enough to reason across the r
 Writing a LaTeX paper produces a kind of feedback that ordinary chat interfaces rarely see. A revision can be rhetorically better and syntactically broken. It can refer to a missing label, misuse a project-specific command, or compile while moving a figure somewhere absurd.
 
 Cloverleaf keeps compilation inside the same loop. The backend serializes and coalesces `latexmk` jobs, parses common diagnostics, and retains the latest successful PDF. The agent receives the current build state, structured errors, and compiler-log context with its request.
+
+When a build fails, **Fix with Codex** turns those diagnostics into an assistant request and returns the proposed repair through the same review flow. I can also make any open `.tex` file the compilation root, including a source in a subdirectory, and save a successful PDF through the browser. These are small affordances, but together they make the build a first-class part of authorship rather than a command I periodically remember to run.
 
 That does not guarantee that every proposed edit compiles. It means a compiler failure becomes evidence available to the same collaborator that proposed the change.
 
@@ -97,7 +103,9 @@ The filesystem is the integration layer between the manuscript, the research pro
 
 Project switching is similarly explicit. The backend validates the new manuscript root, waits for an active build, persists the choice locally, constructs a new workspace and compiler, and rebinds the assistant before exposing the project as active. The editor, compiler, and agent should never disagree about which body of research they are working on.
 
-Cloverleaf itself is a two-process application managed by a small launcher. React and Vite provide the workbench. FastAPI owns filesystem access, compilation, runtime control, and the assistant provider. The frontend talks to narrow JSON and WebSocket APIs; it does not receive provider credentials or arbitrary host-filesystem access.
+Cloverleaf can load an existing project or initialize a new one from the same local folder browser. Each project carries its own Codex transcript and unresolved review cards in local application state, so switching manuscripts or restarting the server does not turn a continuing collaboration into a fresh chat. Assistant turns can be queued while one is running, paused behind edits that still need review, or cancelled without letting queued follow-ups immediately restart the work.
+
+Cloverleaf itself is a two-process application managed by a small launcher. React and Vite provide the workbench. FastAPI owns filesystem access, compilation, runtime control, and the assistant provider. The frontend talks to narrow JSON and WebSocket APIs; it does not receive provider credentials or arbitrary host-filesystem access. Inside the interface, status and terminal views expose bounded operational information, and explicit controls can restart or shut down the supervised local services without turning the browser into a general-purpose shell.
 
 By default, the backend uses the official Codex Python SDK and the machine's existing Codex CLI authentication. That lets Cloverleaf join the authenticated agentic environment already on the machine rather than asking me to put another long-lived secret into a browser integration.
 
@@ -105,9 +113,9 @@ By default, the backend uses the official Codex Python SDK and the machine's exi
 
 Cloverleaf is “Overleaf at home,” not a local reimplementation of everything Overleaf does.
 
-It binds to localhost. File APIs reject absolute paths, traversal forms, symlink escapes, dotfiles, and generated LaTeX artifacts. The backend invokes `latexmk` with a fixed argument list, without a shell or shell escape. Codex runs server-side in a read-only sandbox, and only Cloverleaf's confirmed apply path writes assistant proposals.
+It binds to localhost. File APIs reject traversal forms, symlink escapes, access to Git internals, and generated LaTeX artifacts; assistant attachments are limited to visible project files. The backend invokes `latexmk` with a fixed argument list, without a shell or shell escape. Codex runs server-side in a read-only sandbox, and only Cloverleaf's confirmed apply path writes assistant proposals.
 
-These are useful boundaries, but they do not turn a local LaTeX compiler into a secure service for hostile documents. TeX itself is not sandboxed. Cloverleaf assumes the manuscript is trusted. It has no authentication, real-time collaboration, Git synchronization, or production multi-user deployment.
+These are useful boundaries, but they do not turn a local LaTeX compiler into a secure service for hostile documents. TeX itself is not sandboxed. Cloverleaf assumes the manuscript is trusted. It has no authentication, real-time collaboration, remote Git synchronization, or production multi-user deployment.
 
 That scope is deliberate. I wanted to continue one local research project into its writing stage. The shortest route was not to recreate an entire cloud platform. It was to build the focused source, compilation, preview, and review surfaces that let my existing tools—and my existing AI collaborator—stay involved.
 
