@@ -1,6 +1,7 @@
 import json
 import os
 from pathlib import Path
+import plistlib
 import shutil
 import stat
 import subprocess
@@ -25,15 +26,21 @@ class KernsteinLauncherTests(unittest.TestCase):
             "plutil",
             """#!/usr/bin/env python3
 import json
+import plistlib
 import sys
 
 path = sys.argv[-1]
 try:
-    with open(path, encoding="utf-8") as stream:
-        value = json.load(stream)
+    with open(path, "rb") as stream:
+        contents = stream.read()
+    try:
+        value = json.loads(contents)
+    except (UnicodeDecodeError, ValueError):
+        value = plistlib.loads(contents)
 except (OSError, ValueError):
     raise SystemExit(1)
-if sys.argv[1] == "-lint":
+if sys.argv[1:5] == ["-convert", "json", "-o", "-"]:
+    print(json.dumps(value))
     raise SystemExit(0)
 if sys.argv[1:6] == ["-extract", "schema_version", "raw", "-expect", "integer"]:
     schema = value.get("schema_version")
@@ -42,6 +49,20 @@ if sys.argv[1:6] == ["-extract", "schema_version", "raw", "-expect", "integer"]:
     print(schema)
     raise SystemExit(0)
 raise SystemExit(2)
+""",
+        )
+        self._write_command(
+            "osascript",
+            """#!/usr/bin/env python3
+import json
+import sys
+
+try:
+    value = json.load(sys.stdin)
+except (UnicodeDecodeError, ValueError):
+    raise SystemExit(1)
+if not isinstance(value, dict):
+    raise SystemExit(1)
 """,
         )
 
@@ -131,6 +152,24 @@ exit 1
         self.assertEqual(result.returncode, 78)
         self.assertIn("missing integer schema_version", result.stderr)
 
+    def test_non_json_property_lists_are_rejected(self):
+        self.config.parent.mkdir(parents=True)
+        fixtures = {
+            "xml": plistlib.dumps({"schema_version": 1}, fmt=plistlib.FMT_XML),
+            "binary": plistlib.dumps(
+                {"schema_version": 1}, fmt=plistlib.FMT_BINARY
+            ),
+            "openstep": b'{ "schema_version" = 1; }\n',
+            "comment": b'{ /* relaxed plist syntax */ "schema_version": 1 }\n',
+            "trailing comma": b'{ "schema_version": 1, }\n',
+        }
+        for name, contents in fixtures.items():
+            with self.subTest(name=name):
+                self.config.write_bytes(contents)
+                result = self.run_launcher("--check")
+                self.assertEqual(result.returncode, 78)
+                self.assertIn("not valid JSON", result.stderr)
+
     def test_unsupported_operating_system_is_rejected(self):
         self._write_command("uname", "#!/bin/sh\nprintf 'Linux\\n'\n")
         result = self.run_launcher("--check")
@@ -147,6 +186,15 @@ exit 1
         result = self.run_launcher("--check", path=isolated_bin, append_path=False)
         self.assertEqual(result.returncode, 69)
         self.assertIn("'plutil' was not found", result.stderr)
+
+    def test_missing_osascript_is_rejected(self):
+        isolated_bin = self.root / "uname and plutil only"
+        isolated_bin.mkdir()
+        for command in ("uname", "plutil"):
+            shutil.copy2(self.bin / command, isolated_bin / command)
+        result = self.run_launcher("--check", path=isolated_bin, append_path=False)
+        self.assertEqual(result.returncode, 69)
+        self.assertIn("'osascript' was not found", result.stderr)
 
     def test_interrupted_download_before_final_invocation_has_no_effect(self):
         content = LAUNCHER.read_text(encoding="utf-8")

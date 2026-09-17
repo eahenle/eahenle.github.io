@@ -41,8 +41,9 @@ An initial file is consequently:
 ```
 
 The connection fields and their public/local-only classification will be added
-only from `KERNSTEIN_CLIENT_CONTRACT`. JSON is parsed as data with Apple's
-`plutil`; it is never sourced or evaluated by a shell. Unknown fields are
+only from `KERNSTEIN_CLIENT_CONTRACT`. Apple's `osascript` validates the file
+with JavaScript's strict `JSON.parse`, then `plutil` inspects the schema. The
+configuration is never sourced or evaluated as shell code. Unknown fields are
 preserved but ignored so a scaffold run cannot destroy Mac-agent configuration.
 
 ## Trust and security boundary
@@ -61,7 +62,7 @@ distribution requires it. Normal launches must remain unprivileged.
 ## Commands and exit status
 
 * `--version` prints the source release without platform checks.
-* `--check` validates macOS, `plutil`, and the local schema.
+* `--check` validates macOS, `osascript`, `plutil`, and the local schema.
 * `--status` reports readiness without making a connection.
 * No argument attempts a launch; this pre-contract revision exits `78` after
   validation because launching is intentionally unavailable.
@@ -71,10 +72,12 @@ distribution requires it. Normal launches must remain unprivileged.
 ## Deployment and rollback
 
 This repository is the source for `henletech.net`: `_config.yml` sets that URL,
-`CNAME` names the domain, and the checked production response is served by
-GitHub Pages. GitHub Pages publishes the configured source after an approved
-merge. This environment has no GitHub credentials, so it can prepare a commit
-and PR metadata but cannot merge or verify a newly deployed production route.
+`CNAME` names the domain, and the production response is served by GitHub
+Pages. GitHub Pages publishes the configured source after an approved merge.
+Release `0.1.0-precontract.2` was fetched successfully from the production
+`/kernstein` route after merge. No Turbify setting is involved in publishing
+new versions of this path; retain the existing domain registration and DNS
+settings unless the site's hosting architecture changes.
 
 Rollback is a revert of the publishing commit. On a Mac, remove only launcher
 state with:

@@ -6,6 +6,8 @@
 # Keep all executable statements inside main.  When this file is piped to sh,
 # an interrupted download therefore cannot reach the final invocation below.
 
+# POSIX sh does not define pipefail, and this launcher contains no pipelines.
+# Every fallible command is instead checked directly.
 set -u
 
 readonly PROGRAM_NAME="kernstein-remote"
@@ -60,6 +62,7 @@ require_macos() {
 
 require_prerequisites() {
   command -v plutil >/dev/null 2>&1 || die "$EX_UNAVAILABLE" "required macOS tool 'plutil' was not found"
+  command -v osascript >/dev/null 2>&1 || die "$EX_UNAVAILABLE" "required macOS tool 'osascript' was not found"
 }
 
 initialize_config() {
@@ -102,7 +105,22 @@ initialize_config() {
 validate_config() {
   path=$1
   [ -f "$path" ] || die "$EX_CONFIG" "configuration is not a regular file: $path"
-  plutil -lint "$path" >/dev/null 2>&1 || die "$EX_CONFIG" "configuration is not valid JSON: $path"
+
+  # plutil accepts XML, binary, OpenStep, and relaxed JSON-like property lists.
+  # JavaScript's JSON.parse enforces the documented JSON object format first;
+  # the file stays on standard input instead of appearing in process arguments.
+  osascript -l JavaScript -e '
+ObjC.import("Foundation");
+const data = $.NSFileHandle.fileHandleWithStandardInput.readDataToEndOfFile;
+const text = ObjC.unwrap(
+  $.NSString.alloc.initWithDataEncoding(data, $.NSUTF8StringEncoding)
+);
+const value = JSON.parse(text);
+if (value === null || Array.isArray(value) || typeof value !== "object") {
+  throw new Error("configuration root must be an object");
+}
+' <"$path" >/dev/null 2>&1 ||
+    die "$EX_CONFIG" "configuration is not valid JSON: $path"
 
   schema=$(plutil -extract schema_version raw -expect integer -o - "$path" 2>/dev/null) ||
     die "$EX_CONFIG" "configuration is missing integer schema_version"

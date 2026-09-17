@@ -71,7 +71,7 @@ jobs:
             preview_name="${{ inputs.preview_name }}"
           fi
           preview_name="${preview_name//[^A-Za-z0-9._-]/-}"
-          preview_path="pr-preview/${preview_name}"
+          preview_path="pull-preview/${preview_name}"
           preview_url="https://${{ github.repository_owner }}.github.io/${preview_path}/"
           {
             echo "name=${preview_name}"
@@ -81,6 +81,9 @@ jobs:
 
       - name: Build preview site
         run: |
+          # Published previews are rendered output, never source for another
+          # preview. Remove them to prevent recursively nested preview trees.
+          rm -rf pull-preview
           preview_config="${RUNNER_TEMP}/preview-config.yml"
           printf 'url: "https://${{ github.repository_owner }}.github.io"\n' > "$preview_config"
           bundle exec jekyll build --trace --config "_config.yml,${preview_config}" --baseurl "/${{ steps.preview.outputs.path }}"
@@ -151,6 +154,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           PAGES_BRANCH: ${{ steps.pages.outputs.branch }}
           PAGES_PATH: ${{ steps.pages.outputs.path }}
+          PREVIEW_NAME: ${{ steps.preview.outputs.name }}
           PREVIEW_PATH: ${{ steps.preview.outputs.path }}
         run: |
           set -euo pipefail
@@ -167,9 +171,12 @@ jobs:
 
           publish_root="$publish_dir"
           tracked_path="$PREVIEW_PATH"
+          legacy_preview_path="pr-preview/$PREVIEW_NAME"
+          legacy_tracked_path="$legacy_preview_path"
           if [[ -n "$PAGES_PATH" ]]; then
             publish_root="$publish_dir/$PAGES_PATH"
             tracked_path="$PAGES_PATH/$PREVIEW_PATH"
+            legacy_tracked_path="$PAGES_PATH/$legacy_preview_path"
             mkdir -p "$publish_root"
           fi
 
@@ -179,7 +186,11 @@ jobs:
 
           git -C "$publish_dir" config user.name "github-actions[bot]"
           git -C "$publish_dir" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git -C "$publish_dir" add "$tracked_path"
+          git -C "$publish_dir" add -A -- "$tracked_path"
+          if [[ -n "$(git -C "$publish_dir" ls-files -- "$legacy_tracked_path")" ]]; then
+            rm -rf "$publish_root/$legacy_preview_path"
+            git -C "$publish_dir" add -A -- "$legacy_tracked_path"
+          fi
           if git -C "$publish_dir" diff --cached --quiet; then
             echo "No preview changes to publish."
             exit 0
@@ -282,7 +293,8 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           PAGES_BRANCH: ${{ steps.pages.outputs.branch }}
           PAGES_PATH: ${{ steps.pages.outputs.path }}
-          PREVIEW_PATH: pr-preview/pr-${{ github.event.pull_request.number }}
+          LEGACY_PREVIEW_PATH: pr-preview/pr-${{ github.event.pull_request.number }}
+          PREVIEW_PATH: pull-preview/pr-${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
           publish_dir="${RUNNER_TEMP}/preview-pages"
@@ -296,21 +308,30 @@ jobs:
           git clone --single-branch --branch "$PAGES_BRANCH" "$remote_url" "$publish_dir"
 
           publish_root="$publish_dir"
-          tracked_path="$PREVIEW_PATH"
           if [[ -n "$PAGES_PATH" ]]; then
             publish_root="$publish_dir/$PAGES_PATH"
-            tracked_path="$PAGES_PATH/$PREVIEW_PATH"
           fi
 
-          if [[ ! -d "$publish_root/$PREVIEW_PATH" ]]; then
-            echo "No preview directory exists at $PREVIEW_PATH; nothing to clean up."
+          tracked_paths=()
+          for preview_path in "$PREVIEW_PATH" "$LEGACY_PREVIEW_PATH"; do
+            tracked_path="$preview_path"
+            if [[ -n "$PAGES_PATH" ]]; then
+              tracked_path="$PAGES_PATH/$preview_path"
+            fi
+            if [[ -n "$(git -C "$publish_dir" ls-files -- "$tracked_path")" ]]; then
+              rm -rf "$publish_root/$preview_path"
+              tracked_paths+=("$tracked_path")
+            fi
+          done
+
+          if (( ${#tracked_paths[@]} == 0 )); then
+            echo "No current or legacy preview directory exists; nothing to clean up."
             exit 0
           fi
 
-          rm -rf "$publish_root/$PREVIEW_PATH"
           git -C "$publish_dir" config user.name "github-actions[bot]"
           git -C "$publish_dir" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git -C "$publish_dir" add -A "$tracked_path"
+          git -C "$publish_dir" add -A -- "${tracked_paths[@]}"
           git -C "$publish_dir" commit -m "Remove preview ${PREVIEW_PATH}"
           git -C "$publish_dir" pull --rebase origin "$PAGES_BRANCH"
           git -C "$publish_dir" push origin "HEAD:${PAGES_BRANCH}"
