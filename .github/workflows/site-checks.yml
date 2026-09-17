@@ -26,7 +26,9 @@ jobs:
       - name: Lint launcher shell
         run: shellcheck --shell=sh kernstein
       - name: Build production site
-        run: bundle exec jekyll build --trace
+        run: |
+          rm -rf pull-preview
+          bundle exec jekyll build --trace
         env:
           JEKYLL_ENV: production
       - name: Validate metadata, sitemap, exclusions, and internal links

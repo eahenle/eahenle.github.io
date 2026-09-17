@@ -45,6 +45,8 @@ jobs:
           bundler-cache: true
 
       - name: Build rendered site
-        run: bundle exec jekyll build --trace
+        run: |
+          rm -rf pull-preview
+          bundle exec jekyll build --trace
         env:
           JEKYLL_ENV: production
