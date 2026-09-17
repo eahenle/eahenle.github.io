@@ -2,7 +2,7 @@
 
 ## Release state
 
-`0.1.0-precontract.1` is a reviewable, deliberately non-connecting scaffold.
+`0.1.0-precontract.2` is a reviewable, deliberately non-connecting scaffold.
 The verified `KERNSTEIN_CLIENT_CONTRACT` has not yet been provided. Therefore
 this revision publishes **no connection defaults** and cannot start a VPN,
 tunnel, Windows App, or desktop session. This prevents guessed settings from
@@ -23,7 +23,8 @@ The local file is `~/.config/kernstein-remote/connection.json`. The launcher
 also honors `XDG_CONFIG_HOME` (and the test-oriented
 `KERNSTEIN_CONFIG_HOME`) as the directory containing `kernstein-remote/`.
 It creates directories with umask `077` and installs the file atomically with
-mode `0600`. Existing configuration is never overwritten.
+mode `0600`. A same-directory hard-link operation provides no-clobber creation;
+if another process wins the race, its configuration is preserved and validated.
 
 At this pre-contract stage, the only defined and consumed field is:
 

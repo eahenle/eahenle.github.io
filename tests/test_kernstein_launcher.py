@@ -35,7 +35,7 @@ except (OSError, ValueError):
     raise SystemExit(1)
 if sys.argv[1] == "-lint":
     raise SystemExit(0)
-if sys.argv[1:4] == ["-extract", "schema_version", "raw"]:
+if sys.argv[1:6] == ["-extract", "schema_version", "raw", "-expect", "integer"]:
     schema = value.get("schema_version")
     if type(schema) is not int:
         raise SystemExit(1)
@@ -72,7 +72,7 @@ raise SystemExit(2)
     def test_version_requires_no_macos_tools(self):
         result = self.run_launcher("--version", path=self.root / "empty")
         self.assertEqual(result.returncode, 0)
-        self.assertEqual(result.stdout.strip(), "0.1.0-precontract.1")
+        self.assertEqual(result.stdout.strip(), "0.1.0-precontract.2")
 
     def test_fresh_setup_is_restrictive_and_does_not_connect(self):
         result = self.run_launcher()
@@ -95,6 +95,22 @@ raise SystemExit(2)
         self.assertEqual(result.returncode, 78)
         self.assertIn("could not create configuration directory", result.stderr)
         self.assertTrue(self.config_home.is_file())
+
+    def test_concurrent_configuration_creation_is_not_overwritten(self):
+        self._write_command(
+            "ln",
+            """#!/bin/sh
+printf '{"schema_version":1,"created_by":"other process"}\\n' >"$2"
+exit 1
+""",
+        )
+        result = self.run_launcher("--check")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            json.loads(self.config.read_text()),
+            {"schema_version": 1, "created_by": "other process"},
+        )
+        self.assertIn("preserving it", result.stderr)
 
     def test_invalid_json_and_schema_are_rejected(self):
         self.config.parent.mkdir(parents=True)
