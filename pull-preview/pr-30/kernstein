@@ -203,14 +203,16 @@ ssh_config_value() {
 validate_ssh_contract() {
   expected_known_hosts="$HOME/.ssh/known_hosts_kernstein"
   expected_identity="$HOME/.ssh/id_ed25519_kernstein"
+  expected_identity_short=$(printf '\176/%s' "$EXPECTED_IDENTITY_FILE_RELATIVE")
   [ -f "$expected_identity" ] ||
     die "$EX_CONFIG" "dedicated SSH identity is missing: $expected_identity"
   [ -f "$expected_known_hosts" ] ||
     die "$EX_CONFIG" "pinned SSH host-key file is missing: $expected_known_hosts"
 
   ssh_config="$STATE_DIRECTORY/.ssh-config.$$"
-  host_key="$STATE_DIRECTORY/.host-key.$$"
-  trap 'rm -f "$ssh_config" "$host_key"' 0 1 2 3 15
+  host_key_lookup="$STATE_DIRECTORY/.host-key-lookup.$$"
+  host_keys="$STATE_DIRECTORY/.host-keys.$$"
+  trap 'rm -f "$ssh_config" "$host_key_lookup" "$host_keys"' 0 1 2 3 15
 
   if ! ssh -G -T "$SSH_ALIAS" >"$ssh_config" 2>/dev/null; then
     die "$EX_CONFIG" "could not resolve SSH configuration for '$SSH_ALIAS'"
@@ -254,26 +256,29 @@ validate_ssh_contract() {
   esac
   [ "$effective_host_key_algorithms" = ssh-ed25519 ] ||
     die "$EX_CONFIG" "SSH alias '$SSH_ALIAS' must pin the ssh-ed25519 host-key algorithm"
-  if ! awk -v short="~/$EXPECTED_IDENTITY_FILE_RELATIVE" -v full="$expected_identity" '
-    $1 == "identityfile" {
-      sub(/^[^[:space:]]+[[:space:]]+/, "")
-      if ($0 == short || $0 == full) { found = 1 }
-    }
-    END { exit(found ? 0 : 1) }
-  ' "$ssh_config"; then
+  identity_count=$(awk '$1 == "identityfile" { count++ } END { print count + 0 }' "$ssh_config")
+  [ "$identity_count" -eq 1 ] ||
+    die "$EX_CONFIG" "SSH alias '$SSH_ALIAS' must define exactly one IdentityFile"
+  effective_identity=$(ssh_config_value identityfile "$ssh_config")
+  if [ "$effective_identity" != "$expected_identity_short" ] &&
+    [ "$effective_identity" != "$expected_identity" ]; then
     die "$EX_CONFIG" "SSH alias '$SSH_ALIAS' must use $expected_identity"
   fi
 
-  if ! ssh-keygen -F "$EXPECTED_HOST_KEY_ALIAS" -f "$expected_known_hosts" 2>/dev/null |
-    awk '!/^#/ { print; exit }' >"$host_key" || [ ! -s "$host_key" ]; then
+  if ! ssh-keygen -F "$EXPECTED_HOST_KEY_ALIAS" -f "$expected_known_hosts" \
+    >"$host_key_lookup" 2>/dev/null; then
     die "$EX_CONFIG" "pinned SSH host key for '$EXPECTED_HOST_KEY_ALIAS' is missing"
   fi
-  host_key_fingerprint=$(ssh-keygen -lf "$host_key" 2>/dev/null |
+  awk '!/^#/ && NF { print }' "$host_key_lookup" >"$host_keys"
+  host_key_count=$(awk 'END { print NR + 0 }' "$host_keys")
+  [ "$host_key_count" -eq 1 ] ||
+    die "$EX_CONFIG" "pinned SSH host-key file must contain exactly one key for '$EXPECTED_HOST_KEY_ALIAS'"
+  host_key_fingerprint=$(ssh-keygen -lf "$host_keys" 2>/dev/null |
     awk 'NR == 1 { print $2 }')
   [ "$host_key_fingerprint" = "$EXPECTED_SSH_HOST_KEY_FINGERPRINT" ] ||
     die "$EX_CONFIG" "SSH host-key fingerprint mismatch for '$EXPECTED_HOST_KEY_ALIAS'"
 
-  rm -f "$ssh_config" "$host_key"
+  rm -f "$ssh_config" "$host_key_lookup" "$host_keys"
   trap - 0 1 2 3 15
 }
 
