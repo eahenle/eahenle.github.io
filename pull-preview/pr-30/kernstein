@@ -23,6 +23,7 @@ readonly EXPECTED_HOST_KEY_ALIAS="kernstein"
 readonly EXPECTED_SSH_HOST_KEY_FINGERPRINT="SHA256:pVBg+iXWeVA2Sk2p9nD8PTFp++gDIGJzICIgToQND44"
 readonly EXPECTED_IDENTITY_FILE_RELATIVE=".ssh/id_ed25519_kernstein"
 readonly EXPECTED_REMOTE_HOSTNAME="kernstein"
+readonly EXPECTED_RDP_TLS_FINGERPRINT="9A:3E:ED:A6:40:B8:F8:58:9B:48:60:1D:64:8F:22:A8:AB:31:47:FE:61:28:FA:41:7C:D0:D4:DC:68:01:C2:D5"
 readonly REMOTE_RDP_HOST="127.0.0.1"
 readonly REMOTE_RDP_PORT="3389"
 readonly LOCAL_RDP_HOST="127.0.0.1"
@@ -103,7 +104,7 @@ require_command() {
 }
 
 require_prerequisites() {
-  for required_command in awk lsof open osascript plutil shlock sqlite3 ssh ssh-keygen; do
+  for required_command in awk lsof open osascript plutil python3 shlock sqlite3 ssh ssh-keygen; do
     require_command "$required_command"
   done
 
@@ -119,6 +120,7 @@ require_prerequisites() {
   [ -d "$WINDOWS_APP_PATH" ] ||
     die "$EX_UNAVAILABLE" "Windows App is not installed at $WINDOWS_APP_PATH"
   WINDOWS_APP_DATA_PATH=$(windows_app_data_path)
+  PYTHON3_BIN=$(command -v python3)
 }
 
 initialize_config() {
@@ -273,10 +275,85 @@ validate_windows_app_contract() {
     die "$EX_CONFIG" "saved Windows App PC '$WINDOWS_PC_NAME' must exist exactly once at ${LOCAL_RDP_HOST}:${LOCAL_RDP_PORT}"
 }
 
+verify_rdp_endpoint() {
+  verification_location=$1
+  verification_host=$2
+  verification_port=$3
+  if [ "$verification_location" = local ]; then
+    "$PYTHON3_BIN" - "$verification_host" "$verification_port" \
+      "$EXPECTED_RDP_TLS_FINGERPRINT"
+  elif [ "$verification_location" = remote ]; then
+    run_ssh -o BatchMode=yes "$SSH_DESTINATION" \
+      python3 - "$verification_host" "$verification_port" \
+      "$EXPECTED_RDP_TLS_FINGERPRINT"
+  else
+    return 1
+  fi <<'PYTHON'
+import hashlib
+import socket
+import ssl
+import struct
+import sys
+
+
+def receive_exact(stream, length):
+    chunks = []
+    remaining = length
+    while remaining:
+        chunk = stream.recv(remaining)
+        if not chunk:
+            raise RuntimeError("RDP peer closed during negotiation")
+        chunks.append(chunk)
+        remaining -= len(chunk)
+    return b"".join(chunks)
+
+
+def verify():
+    host, port_text, expected = sys.argv[1:]
+    expected = expected.replace(":", "").lower()
+    request = bytes.fromhex("030000130ee000000000000100080003000000")
+    with socket.create_connection((host, int(port_text)), timeout=8) as raw:
+        raw.sendall(request)
+        header = receive_exact(raw, 4)
+        if header[:2] != b"\x03\x00":
+            raise RuntimeError("invalid TPKT response")
+        packet_length = struct.unpack("!H", header[2:])[0]
+        if packet_length < 12 or packet_length > 4096:
+            raise RuntimeError("invalid RDP negotiation length")
+        packet = header + receive_exact(raw, packet_length - 4)
+        negotiation = packet[-8:]
+        if negotiation[0] != 2 or struct.unpack("<H", negotiation[2:4])[0] != 8:
+            raise RuntimeError("RDP peer did not accept TLS negotiation")
+        selected_protocol = struct.unpack("<I", negotiation[4:8])[0]
+        if selected_protocol not in (1, 2, 8):
+            raise RuntimeError(
+                f"unexpected RDP security protocol {selected_protocol}"
+            )
+
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+        with context.wrap_socket(raw, server_hostname=host) as secured:
+            certificate = secured.getpeercert(binary_form=True)
+            actual = hashlib.sha256(certificate).hexdigest()
+            if actual != expected:
+                raise RuntimeError(f"RDP TLS fingerprint mismatch: {actual}")
+
+
+try:
+    verify()
+except Exception as error:
+    print(f"kernstein-rdp-check: {error}", file=sys.stderr)
+    raise SystemExit(1)
+PYTHON
+}
+
 validate_operational_contract() {
   validate_ssh_contract
   validate_windows_app_contract
   validate_private_path
+  verify_rdp_endpoint remote "$REMOTE_RDP_HOST" "$REMOTE_RDP_PORT" ||
+    die "$EX_UNAVAILABLE" "Kernstein RDP listener or pinned TLS certificate is unavailable"
 }
 
 tunnel_running() {
@@ -313,6 +390,7 @@ finish_tunnel_operation() {
 
 start_tunnel_locked() {
   if tunnel_running; then
+    verify_forwarded_rdp
     say "${PROGRAM_NAME}: tunnel already running at ${LOCAL_RDP_HOST}:${LOCAL_RDP_PORT}"
     return 0
   fi
@@ -332,7 +410,17 @@ start_tunnel_locked() {
     die "$EX_UNAVAILABLE" "could not start the authenticated RDP tunnel"
   fi
   tunnel_running || die "$EX_UNAVAILABLE" "SSH exited without a usable control tunnel"
+  verify_forwarded_rdp
   say "${PROGRAM_NAME}: tunnel started at ${LOCAL_RDP_HOST}:${LOCAL_RDP_PORT}"
+}
+
+verify_forwarded_rdp() {
+  if verify_rdp_endpoint local "$LOCAL_RDP_HOST" "$LOCAL_RDP_PORT"; then
+    return 0
+  fi
+  run_ssh -S "$CONTROL_SOCKET" -O exit "$SSH_DESTINATION" >/dev/null 2>&1 || true
+  [ ! -e "$CONTROL_SOCKET" ] || rm -f "$CONTROL_SOCKET"
+  die "$EX_UNAVAILABLE" "forwarded RDP endpoint failed pinned TLS verification"
 }
 
 stop_tunnel_locked() {
@@ -369,6 +457,7 @@ restart_tunnel() {
 show_status() {
   say "${PROGRAM_NAME}: release $RELEASE_VERSION; verified private path is ready"
   if tunnel_running; then
+    verify_forwarded_rdp
     say "${PROGRAM_NAME}: tunnel running at ${LOCAL_RDP_HOST}:${LOCAL_RDP_PORT}"
   else
     say "${PROGRAM_NAME}: tunnel stopped"
