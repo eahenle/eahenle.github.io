@@ -84,6 +84,14 @@ windows_app_path() {
   printf '%s\n' "${KERNSTEIN_WINDOWS_APP_PATH:-/Applications/Windows App.app}"
 }
 
+windows_app_data_path() {
+  if [ -n "${KERNSTEIN_WINDOWS_DATA_PATH:-}" ]; then
+    printf '%s\n' "$KERNSTEIN_WINDOWS_DATA_PATH"
+  else
+    printf '%s/Library/Containers/com.microsoft.rdc.macos/Data/Library/Application Support/com.microsoft.rdc.macos/com.microsoft.rdc.application-data.sqlite\n' "$HOME"
+  fi
+}
+
 require_macos() {
   os=$(uname -s 2>/dev/null || printf unknown)
   [ "$os" = Darwin ] || die "$EX_UNAVAILABLE" "unsupported operating system '$os'; macOS is required"
@@ -95,7 +103,7 @@ require_command() {
 }
 
 require_prerequisites() {
-  for required_command in awk lsof open osascript plutil shlock ssh ssh-keygen; do
+  for required_command in awk lsof open osascript plutil shlock sqlite3 ssh ssh-keygen; do
     require_command "$required_command"
   done
 
@@ -110,6 +118,7 @@ require_prerequisites() {
   WINDOWS_APP_PATH=$(windows_app_path)
   [ -d "$WINDOWS_APP_PATH" ] ||
     die "$EX_UNAVAILABLE" "Windows App is not installed at $WINDOWS_APP_PATH"
+  WINDOWS_APP_DATA_PATH=$(windows_app_data_path)
 }
 
 initialize_config() {
@@ -253,8 +262,20 @@ validate_private_path() {
   fi
 }
 
+validate_windows_app_contract() {
+  [ -f "$WINDOWS_APP_DATA_PATH" ] ||
+    die "$EX_CONFIG" "Windows App connection database is missing: $WINDOWS_APP_DATA_PATH"
+  pc_contract=$(sqlite3 -readonly "$WINDOWS_APP_DATA_PATH" \
+    "SELECT COUNT(*), COALESCE(SUM(ZHOSTNAME = '${LOCAL_RDP_HOST}:${LOCAL_RDP_PORT}'), 0) FROM ZBOOKMARKENTITY WHERE ZFRIENDLYNAME = '${WINDOWS_PC_NAME}';" \
+    2>/dev/null) ||
+    die "$EX_CONFIG" "could not read saved Windows App connections"
+  [ "$pc_contract" = "1|1" ] ||
+    die "$EX_CONFIG" "saved Windows App PC '$WINDOWS_PC_NAME' must exist exactly once at ${LOCAL_RDP_HOST}:${LOCAL_RDP_PORT}"
+}
+
 validate_operational_contract() {
   validate_ssh_contract
+  validate_windows_app_contract
   validate_private_path
 }
 
