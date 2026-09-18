@@ -95,7 +95,7 @@ require_command() {
 }
 
 require_prerequisites() {
-  for required_command in awk lsof open osascript plutil ssh ssh-keygen; do
+  for required_command in awk lsof open osascript plutil shlock ssh ssh-keygen; do
     require_command "$required_command"
   done
 
@@ -199,8 +199,7 @@ initialize_state() {
 run_ssh() {
   ssh \
     -F /dev/null \
-    -o IdentityFile=none \
-    -i "$SSH_IDENTITY" \
+    -o IdentityFile="$SSH_IDENTITY" \
     -o IdentitiesOnly=yes \
     -o PubkeyAuthentication=yes \
     -o PasswordAuthentication=no \
@@ -265,13 +264,15 @@ tunnel_running() {
 
 release_tunnel_lock() {
   if [ "${LOCK_HELD:-0}" -eq 1 ]; then
-    rmdir "$TUNNEL_LOCK" 2>/dev/null || true
+    rm -f "$TUNNEL_LOCK"
     LOCK_HELD=0
   fi
 }
 
 acquire_tunnel_lock() {
-  if ! mkdir "$TUNNEL_LOCK" 2>/dev/null; then
+  # macOS shlock atomically records this process ID and replaces a lock whose
+  # owner no longer exists, so a crash or forced restart cannot wedge control.
+  if ! shlock -f "$TUNNEL_LOCK" -p "$$"; then
     die "$EX_UNAVAILABLE" "another tunnel operation is in progress; retry after it finishes"
   fi
   LOCK_HELD=1
@@ -280,7 +281,7 @@ acquire_tunnel_lock() {
 }
 
 finish_tunnel_operation() {
-  if ! rmdir "$TUNNEL_LOCK" 2>/dev/null; then
+  if ! rm -f "$TUNNEL_LOCK"; then
     LOCK_HELD=0
     trap - 0 1 2 3 15
     die "$EX_UNAVAILABLE" "could not release tunnel operation lock: $TUNNEL_LOCK"
