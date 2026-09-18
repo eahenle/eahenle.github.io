@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" role="img" aria-labelledby="title desc">
+  <title id="title">Cumulative crimes committed by world</title>
+  <desc id="desc">A reproduced line chart showing cumulative crimes over time. Gemini 3 Flash rises to 683, Mixed Multi-LLM rises to 352, Grok 4.1 Fast rises to 183, and OpenAI GPT-5 Mini remains near 2.</desc>
+  <defs>
+    <style>
+      .title { font: 700 36px Arial, Helvetica, sans-serif; fill: #222; }
+      .title-accent { fill: #ff6b35; }
+      .axis-label { font: 700 18px Arial, Helvetica, sans-serif; fill: #333; }
+      .tick { font: 15px Arial, Helvetica, sans-serif; fill: #333; }
+      .grid { stroke: #e8e8e8; stroke-width: 1; }
+      .axis { stroke: #333; stroke-width: 2; }
+      .legend-text { font: 15px Arial, Helvetica, sans-serif; fill: #222; }
+      .endpoint { font: 700 16px Arial, Helvetica, sans-serif; }
+      .brand { font: 700 22px Arial, Helvetica, sans-serif; fill: #333; }
+      .blue { stroke: #6aa0ff; fill: none; }
+      .orange { stroke: #f6a13a; fill: none; }
+      .red { stroke: #ff7b7b; fill: none; }
+      .green { stroke: #77c879; fill: none; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="700" fill="#fff" />
+
+  <text x="410" y="62" text-anchor="middle" class="title">Cumulative Crimes Committed <tspan class="title-accent">by World</tspan></text>
+  <g transform="translate(920 37)">
+    <circle cx="13" cy="13" r="9" fill="#333" />
+    <path d="M13 3 A10 10 0 0 0 4 16 L22 16 A10 10 0 0 0 13 3" fill="#fff" opacity="0.95" />
+    <path d="M2 9 L26 22" stroke="#333" stroke-width="4" />
+    <text x="34" y="22" class="brand">Emergence</text>
+  </g>
+
+  <!-- Plot area: left=190, top=130, width=760, height=420. y scale max 700. -->
+  <g id="grid">
+    <line x1="190" y1="550" x2="950" y2="550" class="axis" />
+    <line x1="190" y1="130" x2="190" y2="550" class="axis" />
+
+    <line x1="190" y1="490" x2="950" y2="490" class="grid" />
+    <line x1="190" y1="430" x2="950" y2="430" class="grid" />
+    <line x1="190" y1="370" x2="950" y2="370" class="grid" />
+    <line x1="190" y1="310" x2="950" y2="310" class="grid" />
+    <line x1="190" y1="250" x2="950" y2="250" class="grid" />
+    <line x1="190" y1="190" x2="950" y2="190" class="grid" />
+    <line x1="190" y1="130" x2="950" y2="130" class="grid" />
+
+    <line x1="270" y1="130" x2="270" y2="550" class="grid" />
+    <line x1="350" y1="130" x2="350" y2="550" class="grid" />
+    <line x1="430" y1="130" x2="430" y2="550" class="grid" />
+    <line x1="510" y1="130" x2="510" y2="550" class="grid" />
+    <line x1="590" y1="130" x2="590" y2="550" class="grid" />
+    <line x1="670" y1="130" x2="670" y2="550" class="grid" />
+    <line x1="750" y1="130" x2="750" y2="550" class="grid" />
+    <line x1="830" y1="130" x2="830" y2="550" class="grid" />
+    <line x1="910" y1="130" x2="910" y2="550" class="grid" />
+  </g>
+
+  <g id="ticks">
+    <text x="180" y="555" text-anchor="end" class="tick">0</text>
+    <text x="180" y="495" text-anchor="end" class="tick">100</text>
+    <text x="180" y="435" text-anchor="end" class="tick">200</text>
+    <text x="180" y="375" text-anchor="end" class="tick">300</text>
+    <text x="180" y="315" text-anchor="end" class="tick">400</text>
+    <text x="180" y="255" text-anchor="end" class="tick">500</text>
+    <text x="180" y="195" text-anchor="end" class="tick">600</text>
+    <text x="180" y="135" text-anchor="end" class="tick">700</text>
+
+    <text x="190" y="585" text-anchor="middle" class="tick">Mar 29</text>
+    <text x="270" y="585" text-anchor="middle" class="tick">Mar 31</text>
+    <text x="350" y="585" text-anchor="middle" class="tick">Apr 02</text>
+    <text x="430" y="585" text-anchor="middle" class="tick">Apr 04</text>
+    <text x="510" y="585" text-anchor="middle" class="tick">Apr 06</text>
+    <text x="590" y="585" text-anchor="middle" class="tick">Apr 08</text>
+    <text x="670" y="585" text-anchor="middle" class="tick">Apr 10</text>
+    <text x="750" y="585" text-anchor="middle" class="tick">Apr 12</text>
+    <text x="830" y="585" text-anchor="middle" class="tick">Apr 14</text>
+  </g>
+
+  <text x="570" y="642" text-anchor="middle" class="axis-label">Date</text>
+  <text x="58" y="340" text-anchor="middle" transform="rotate(-90 58 340)" class="axis-label">Cumulative Crimes Committed</text>
+
+  <g id="legend" transform="translate(205 148)">
+    <rect x="0" y="0" width="260" height="108" fill="#fff" stroke="#333" stroke-width="1.5" />
+    <line x1="20" y1="24" x2="48" y2="24" class="blue" stroke-width="5" />
+    <text x="60" y="29" class="legend-text">Gemini (3 Flash)</text>
+    <line x1="20" y1="48" x2="48" y2="48" class="orange" stroke-width="5" />
+    <text x="60" y="53" class="legend-text">Mixed (Multi-LLM)</text>
+    <line x1="20" y1="72" x2="48" y2="72" class="red" stroke-width="5" />
+    <text x="60" y="77" class="legend-text">Grok (4.1 Fast)</text>
+    <line x1="20" y1="96" x2="48" y2="96" class="green" stroke-width="5" />
+    <text x="60" y="101" class="legend-text">OpenAI (GPT-5 Mini)</text>
+  </g>
+
+  <polyline class="red" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" points="190,550 195,548 200,535 206,513 214,492 225,482 238,477 252,468 267,462 282,455 297,449 315,442 332,436 350,428 368,420 385,415 405,408 430,402" />
+  <text x="438" y="405" class="endpoint" fill="#ff5c5c">183</text>
+
+  <polyline class="orange" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" points="190,550 250,550 320,550 390,550 455,547 505,544 545,539 575,532 590,524 605,470 620,425 640,414 665,405 690,401 713,392 732,375 750,356 770,346 795,346 830,346 870,346" />
+  <text x="882" y="350" class="endpoint" fill="#f08e16">352</text>
+
+  <polyline class="blue" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" points="190,550 230,548 270,545 310,541 350,536 385,530 420,522 455,514 490,503 520,492 545,478 565,456 585,425 605,405 630,396 650,372 675,348 700,340 724,326 748,310 775,290 805,290 835,280 862,250 885,235 900,205 920,188 930,170 940,150 950,140" />
+  <text x="962" y="145" class="endpoint" fill="#5d92ff">683</text>
+
+  <polyline class="green" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" points="190,550 300,550 420,550 540,549 660,549 780,549 870,549" />
+</svg>
