@@ -5,6 +5,7 @@ import plistlib
 import shutil
 import stat
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -20,8 +21,40 @@ class KernsteinLauncherTests(unittest.TestCase):
         self.root = Path(self.temporary.name)
         self.bin = self.root / "mock bin"
         self.config_home = self.root / "config home"
+        self.state_home = self.root / "state home"
+        self.home = self.root / "home"
+        self.windows_app = self.root / "Windows App.app"
+        self.windows_data = self.root / "Windows App data.sqlite"
+        self.tunnel_marker = self.root / "tunnel running"
+        self.open_log = self.root / "open log"
+        self.ssh_log = self.root / "ssh log"
+        self.rdp_log = self.root / "rdp log"
         self.bin.mkdir()
+        (self.home / ".ssh").mkdir(parents=True)
+        self.windows_app.mkdir()
+        self.windows_data.touch()
+        (self.home / ".ssh" / "id_ed25519_kernstein").write_text(
+            "test fixture, not a private key\n", encoding="utf-8"
+        )
+        (self.home / ".ssh" / "known_hosts_kernstein").write_text(
+            "kernstein ssh-ed25519 test-public-key\n", encoding="utf-8"
+        )
         self._write_command("uname", "#!/bin/sh\nprintf 'Darwin\\n'\n")
+        self._write_command("lsof", "#!/bin/sh\nexit 1\n")
+        self._write_command(
+            "open",
+            "#!/bin/sh\nprintf '%s\\n' \"$*\" >>\"$KERNSTEIN_MOCK_OPEN_LOG\"\n",
+        )
+        self._write_command("tailscale", "#!/bin/sh\nexit 0\n")
+        self._write_command("sqlite3", "#!/bin/sh\nprintf '1|1\\n'\n")
+        self._write_command(
+            "python3",
+            """#!/bin/sh
+printf '%s\n' "$*" >>"$KERNSTEIN_MOCK_RDP_LOG"
+cat >/dev/null
+exit 0
+""",
+        )
         self._write_command(
             "plutil",
             """#!/usr/bin/env python3
@@ -65,9 +98,72 @@ if not isinstance(value, dict):
     raise SystemExit(1)
 """,
         )
+        self._write_command(
+            "ssh",
+            """#!/bin/sh
+printf '%s\\n' "$*" >>"$KERNSTEIN_MOCK_SSH_LOG"
+case " $* " in
+  *" -O check "*)
+    test -f "$KERNSTEIN_MOCK_TUNNEL"
+    ;;
+  *" -O exit "*)
+    rm -f "$KERNSTEIN_MOCK_TUNNEL"
+    ;;
+  *" -fN "*)
+    : >"$KERNSTEIN_MOCK_TUNNEL"
+    ;;
+  *)
+    exit 0
+    ;;
+esac
+""",
+        )
+        self._write_command(
+            "ssh-keygen",
+            """#!/bin/sh
+case "$1" in
+  -F)
+    printf '# Host kernstein found: line 1\\n'
+    printf 'kernstein ssh-ed25519 test-public-key\\n'
+    ;;
+  -lf)
+    printf '256 SHA256:pVBg+iXWeVA2Sk2p9nD8PTFp++gDIGJzICIgToQND44 fixture (ED25519)\\n'
+    ;;
+  *) exit 2 ;;
+esac
+""",
+        )
+        self._write_command(
+            "shlock",
+            """#!/usr/bin/env python3
+import os
+import sys
+
+path = sys.argv[sys.argv.index("-f") + 1]
+owner = sys.argv[sys.argv.index("-p") + 1]
+try:
+    with open(path, encoding="utf-8") as stream:
+        existing_owner = int(stream.read().strip())
+    os.kill(existing_owner, 0)
+except (OSError, ValueError):
+    try:
+        os.unlink(path)
+    except FileNotFoundError:
+        pass
+else:
+    raise SystemExit(1)
+
+descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+    stream.write(f"{owner}\\n")
+""",
+        )
 
     def _write_command(self, name, body):
         path = self.bin / name
+        body = body.replace(
+            "#!/usr/bin/env python3\n", f"#!{sys.executable}\n", 1
+        )
         path.write_text(body, encoding="utf-8")
         path.chmod(0o755)
 
@@ -77,7 +173,15 @@ if not isinstance(value, dict):
         environment["PATH"] = (
             f"{selected_path}:{environment['PATH']}" if append_path else selected_path
         )
+        environment["HOME"] = str(self.home)
         environment["KERNSTEIN_CONFIG_HOME"] = str(self.config_home)
+        environment["KERNSTEIN_STATE_HOME"] = str(self.state_home)
+        environment["KERNSTEIN_WINDOWS_APP_PATH"] = str(self.windows_app)
+        environment["KERNSTEIN_WINDOWS_DATA_PATH"] = str(self.windows_data)
+        environment["KERNSTEIN_MOCK_TUNNEL"] = str(self.tunnel_marker)
+        environment["KERNSTEIN_MOCK_OPEN_LOG"] = str(self.open_log)
+        environment["KERNSTEIN_MOCK_SSH_LOG"] = str(self.ssh_log)
+        environment["KERNSTEIN_MOCK_RDP_LOG"] = str(self.rdp_log)
         return subprocess.run(
             ["/bin/sh", str(source), *arguments],
             check=False,
@@ -93,14 +197,26 @@ if not isinstance(value, dict):
     def test_version_requires_no_macos_tools(self):
         result = self.run_launcher("--version", path=self.root / "empty")
         self.assertEqual(result.returncode, 0)
-        self.assertEqual(result.stdout.strip(), "0.1.0-precontract.2")
+        self.assertEqual(result.stdout.strip(), "0.2.0")
 
-    def test_fresh_setup_is_restrictive_and_does_not_connect(self):
+    def test_fresh_launch_initializes_config_starts_tunnel_and_opens_app(self):
         result = self.run_launcher()
-        self.assertEqual(result.returncode, 78)
+        self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(self.config.read_text()), {"schema_version": 1})
         self.assertEqual(stat.S_IMODE(self.config.stat().st_mode), 0o600)
-        self.assertIn("no network or app action was taken", result.stderr)
+        self.assertTrue(self.tunnel_marker.exists())
+        self.assertFalse(
+            (self.state_home / "kernstein-remote" / "tunnel.lock").exists()
+        )
+        self.assertIn(str(self.windows_app), self.open_log.read_text())
+        self.assertIn("Windows App opened", result.stderr)
+
+    def test_check_verifies_without_starting_or_opening(self):
+        result = self.run_launcher("--check")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(self.tunnel_marker.exists())
+        self.assertFalse(self.open_log.exists())
+        self.assertIn("host identity", result.stderr)
 
     def test_repeat_check_preserves_existing_configuration(self):
         self.config.parent.mkdir(parents=True)
@@ -178,23 +294,197 @@ exit 1
         self.assertFalse(self.config.exists())
 
     def test_missing_plutil_is_rejected(self):
-        isolated_bin = self.root / "uname only"
+        isolated_bin = self.root / "without plutil"
         isolated_bin.mkdir()
-        shutil.copy2(self.bin / "uname", isolated_bin / "uname")
-        # Include system utilities but shadow command lookup by invoking a shell
-        # whose PATH has a deliberately absent plutil on this Linux test host.
+        for command in (
+            "lsof",
+            "open",
+            "osascript",
+            "ssh",
+            "ssh-keygen",
+            "tailscale",
+            "uname",
+        ):
+            shutil.copy2(self.bin / command, isolated_bin / command)
+        shutil.copyfile(shutil.which("awk"), isolated_bin / "awk")
+        (isolated_bin / "awk").chmod(0o755)
         result = self.run_launcher("--check", path=isolated_bin, append_path=False)
         self.assertEqual(result.returncode, 69)
         self.assertIn("'plutil' was not found", result.stderr)
 
     def test_missing_osascript_is_rejected(self):
-        isolated_bin = self.root / "uname and plutil only"
+        isolated_bin = self.root / "without osascript"
         isolated_bin.mkdir()
-        for command in ("uname", "plutil"):
+        for command in (
+            "lsof",
+            "open",
+            "plutil",
+            "ssh",
+            "ssh-keygen",
+            "tailscale",
+            "uname",
+        ):
             shutil.copy2(self.bin / command, isolated_bin / command)
+        shutil.copyfile(shutil.which("awk"), isolated_bin / "awk")
+        (isolated_bin / "awk").chmod(0o755)
         result = self.run_launcher("--check", path=isolated_bin, append_path=False)
         self.assertEqual(result.returncode, 69)
         self.assertIn("'osascript' was not found", result.stderr)
+
+    def test_failed_authenticated_ssh_is_rejected(self):
+        self._write_command(
+            "ssh",
+            "#!/bin/sh\nexit 1\n",
+        )
+        result = self.run_launcher("--check")
+        self.assertEqual(result.returncode, 69)
+        self.assertIn("authenticated OpenSSH access", result.stderr)
+
+    def test_unreachable_tailnet_peer_is_rejected(self):
+        self._write_command("tailscale", "#!/bin/sh\nexit 1\n")
+        result = self.run_launcher("--check")
+        self.assertEqual(result.returncode, 69)
+        self.assertIn("not reachable through", result.stderr)
+
+    def test_unavailable_remote_rdp_is_rejected(self):
+        self._write_command(
+            "ssh",
+            """#!/bin/sh
+case " $* " in
+  *" python3 - 127.0.0.1 3389 "*) exit 1 ;;
+  *) exit 0 ;;
+esac
+""",
+        )
+        result = self.run_launcher("--check")
+        self.assertEqual(result.returncode, 69)
+        self.assertIn("RDP listener or pinned TLS certificate", result.stderr)
+
+    def test_missing_or_misdirected_saved_windows_pc_is_rejected(self):
+        for name, contract in (("missing", "0|0"), ("wrong endpoint", "1|0")):
+            with self.subTest(name=name):
+                self._write_command(
+                    "sqlite3", f"#!/bin/sh\nprintf '{contract}\\n'\n"
+                )
+                result = self.run_launcher("--check")
+                self.assertEqual(result.returncode, 78)
+                self.assertIn("must exist exactly once at 127.0.0.1:3389", result.stderr)
+
+    def test_unexpected_host_key_fingerprint_is_rejected(self):
+        self._write_command(
+            "ssh-keygen",
+            """#!/bin/sh
+case "$1" in
+  -F) printf 'kernstein ssh-ed25519 test-public-key\\n' ;;
+  -lf) printf '256 SHA256:wrong fixture (ED25519)\\n' ;;
+  *) exit 2 ;;
+esac
+""",
+        )
+        result = self.run_launcher("--check")
+        self.assertEqual(result.returncode, 78)
+        self.assertIn("host-key fingerprint mismatch", result.stderr)
+
+    def test_additional_host_key_is_rejected(self):
+        self._write_command(
+            "ssh-keygen",
+            """#!/bin/sh
+case "$1" in
+  -F)
+    printf 'kernstein ssh-ed25519 expected-public-key\\n'
+    printf 'kernstein ssh-ed25519 additional-public-key\\n'
+    ;;
+  -lf) printf '256 SHA256:pVBg+iXWeVA2Sk2p9nD8PTFp++gDIGJzICIgToQND44 fixture (ED25519)\\n' ;;
+  *) exit 2 ;;
+esac
+""",
+        )
+        result = self.run_launcher("--check")
+        self.assertEqual(result.returncode, 78)
+        self.assertIn("exactly one key", result.stderr)
+
+    def test_ssh_ignores_config_proxies_and_inherited_identities(self):
+        result = self.run_launcher("--start")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        calls = self.ssh_log.read_text()
+        self.assertIn("-F /dev/null", calls)
+        self.assertIn(f"-o IdentityFile={self.home}/.ssh/id_ed25519_kernstein", calls)
+        self.assertNotIn("IdentityFile=none", calls)
+        self.assertNotIn(" -i ", f" {calls} ")
+        self.assertIn("-o ProxyCommand=none", calls)
+        self.assertIn("-o ProxyJump=none", calls)
+        self.assertIn("graf@kernstein.tail83f91c.ts.net", calls)
+        self.assertNotIn(" -G ", f" {calls} ")
+        self.assertEqual(
+            calls.count("-L 127.0.0.1:3389:127.0.0.1:3389"), 1
+        )
+
+    def test_existing_operation_lock_prevents_concurrent_start(self):
+        lock = self.state_home / "kernstein-remote" / "tunnel.lock"
+        lock.parent.mkdir(parents=True)
+        lock.write_text(f"{os.getpid()}\n", encoding="utf-8")
+        result = self.run_launcher("--start")
+        self.assertEqual(result.returncode, 69)
+        self.assertIn("another tunnel operation is in progress", result.stderr)
+        self.assertFalse(self.tunnel_marker.exists())
+
+    def test_abandoned_operation_lock_is_recovered(self):
+        lock = self.state_home / "kernstein-remote" / "tunnel.lock"
+        lock.parent.mkdir(parents=True)
+        lock.write_text("2147483647\n", encoding="utf-8")
+        result = self.run_launcher("--start")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(self.tunnel_marker.exists())
+        self.assertFalse(lock.exists())
+
+    def test_stop_closes_launcher_managed_tunnel(self):
+        self.tunnel_marker.touch()
+        self.windows_app.rmdir()
+        self._write_command("tailscale", "#!/bin/sh\nexit 1\n")
+        result = self.run_launcher("--stop")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(self.tunnel_marker.exists())
+        self.assertIn("tunnel stopped", result.stderr)
+
+    def test_failed_forwarded_rdp_verification_stops_tunnel(self):
+        self._write_command("python3", "#!/bin/sh\ncat >/dev/null\nexit 1\n")
+        result = self.run_launcher("--start")
+        self.assertEqual(result.returncode, 69)
+        self.assertIn("failed pinned TLS verification", result.stderr)
+        self.assertFalse(self.tunnel_marker.exists())
+
+    def test_failed_tunnel_cleanup_preserves_control_socket(self):
+        control_socket = self.state_home / "kernstein-remote" / "tunnel.sock"
+        self._write_command("python3", "#!/bin/sh\ncat >/dev/null\nexit 1\n")
+        self._write_command(
+            "ssh",
+            """#!/bin/sh
+case " $* " in
+  *" -O check "*) test -f "$KERNSTEIN_MOCK_TUNNEL" ;;
+  *" -O exit "*) exit 1 ;;
+  *" -fN "*)
+    : >"$KERNSTEIN_MOCK_TUNNEL"
+    : >"$KERNSTEIN_STATE_HOME/kernstein-remote/tunnel.sock"
+    ;;
+  *) exit 0 ;;
+esac
+""",
+        )
+        result = self.run_launcher("--start")
+        self.assertEqual(result.returncode, 69)
+        self.assertIn("cleanup failed; control socket preserved", result.stderr)
+        self.assertTrue(self.tunnel_marker.exists())
+        self.assertTrue(control_socket.exists())
+
+    def test_occupied_local_port_prevents_start(self):
+        control_socket = self.state_home / "kernstein-remote" / "tunnel.sock"
+        control_socket.parent.mkdir(parents=True)
+        control_socket.touch()
+        self._write_command("lsof", "#!/bin/sh\nexit 0\n")
+        result = self.run_launcher("--start")
+        self.assertEqual(result.returncode, 69)
+        self.assertIn("local TCP port 3389 is already in use", result.stderr)
+        self.assertTrue(control_socket.exists())
 
     def test_interrupted_download_before_final_invocation_has_no_effect(self):
         content = LAUNCHER.read_text(encoding="utf-8")
@@ -204,6 +494,7 @@ exit 1
         result = self.run_launcher(source=partial)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertFalse(self.config.exists())
+        self.assertFalse(self.tunnel_marker.exists())
 
     def test_route_is_raw_shell_source(self):
         content = LAUNCHER.read_text(encoding="utf-8")

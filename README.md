@@ -29,3 +29,11 @@ python scripts/distribution_kit.py _posts/YYYY-MM-DD-slug.markdown
 The output under `_distribution/` is intentionally excluded from Jekyll and Git.
 See [`docs/PUBLISHING.md`](docs/PUBLISHING.md) for newsletter, privacy-respecting
 analytics, webmaster verification, and the repeatable publishing checklist.
+
+## Kernstein Remote
+
+The reviewed macOS launcher is published at `https://henletech.net/kernstein`.
+It validates the pinned Tailscale and OpenSSH contract, starts the loopback RDP
+tunnel, and opens the persistent Windows App connection. See
+[`docs/KERNSTEIN_REMOTE.md`](docs/KERNSTEIN_REMOTE.md) for prerequisites,
+commands, validation evidence, and narrow rollback steps.
