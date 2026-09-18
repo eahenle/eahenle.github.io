@@ -395,10 +395,10 @@ start_tunnel_locked() {
     return 0
   fi
 
-  [ ! -e "$CONTROL_SOCKET" ] || rm -f "$CONTROL_SOCKET"
   if lsof -nP -iTCP:"$LOCAL_RDP_PORT" -sTCP:LISTEN >/dev/null 2>&1; then
-    die "$EX_UNAVAILABLE" "local TCP port $LOCAL_RDP_PORT is already in use"
+    die "$EX_UNAVAILABLE" "local TCP port $LOCAL_RDP_PORT is already in use; any existing control socket was preserved"
   fi
+  [ ! -e "$CONTROL_SOCKET" ] || rm -f "$CONTROL_SOCKET"
 
   if ! run_ssh -M -S "$CONTROL_SOCKET" -fN \
     -L "${LOCAL_RDP_HOST}:${LOCAL_RDP_PORT}:${REMOTE_RDP_HOST}:${REMOTE_RDP_PORT}" \
@@ -418,8 +418,9 @@ verify_forwarded_rdp() {
   if verify_rdp_endpoint local "$LOCAL_RDP_HOST" "$LOCAL_RDP_PORT"; then
     return 0
   fi
-  run_ssh -S "$CONTROL_SOCKET" -O exit "$SSH_DESTINATION" >/dev/null 2>&1 || true
-  [ ! -e "$CONTROL_SOCKET" ] || rm -f "$CONTROL_SOCKET"
+  if ! run_ssh -S "$CONTROL_SOCKET" -O exit "$SSH_DESTINATION" >/dev/null 2>&1; then
+    die "$EX_UNAVAILABLE" "forwarded RDP verification and tunnel cleanup failed; control socket preserved"
+  fi
   die "$EX_UNAVAILABLE" "forwarded RDP endpoint failed pinned TLS verification"
 }
 
@@ -431,6 +432,9 @@ stop_tunnel_locked() {
     say "${PROGRAM_NAME}: tunnel stopped"
   else
     say "${PROGRAM_NAME}: tunnel is not running"
+    if lsof -nP -iTCP:"$LOCAL_RDP_PORT" -sTCP:LISTEN >/dev/null 2>&1; then
+      die "$EX_UNAVAILABLE" "local TCP port $LOCAL_RDP_PORT is still in use; control socket preserved"
+    fi
     [ ! -e "$CONTROL_SOCKET" ] || rm -f "$CONTROL_SOCKET"
   fi
 }
@@ -492,7 +496,9 @@ main() {
 
   require_macos
   if [ "$action" = --stop ]; then
-    require_command ssh
+    for stop_command in lsof shlock ssh; do
+      require_command "$stop_command"
+    done
     initialize_state
     stop_tunnel
     exit 0
