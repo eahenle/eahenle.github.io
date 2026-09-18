@@ -17,7 +17,6 @@ readonly EX_CONFIG=78
 readonly EX_UNAVAILABLE=69
 
 # Verified public connection contract. Credentials remain local to the Mac.
-readonly SSH_ALIAS="kernstein"
 readonly EXPECTED_SSH_HOSTNAME="kernstein.tail83f91c.ts.net"
 readonly EXPECTED_SSH_USER="graf"
 readonly EXPECTED_HOST_KEY_ALIAS="kernstein"
@@ -184,88 +183,51 @@ initialize_state() {
     umask "$old_umask"
     die "$EX_CONFIG" "could not create state directory: $STATE_DIRECTORY"
   fi
+  if ! chmod 700 "$STATE_DIRECTORY"; then
+    umask "$old_umask"
+    die "$EX_CONFIG" "could not secure state directory: $STATE_DIRECTORY"
+  fi
   umask "$old_umask"
   CONTROL_SOCKET="$STATE_DIRECTORY/tunnel.sock"
+  TUNNEL_LOCK="$STATE_DIRECTORY/tunnel.lock"
+  SSH_IDENTITY="$HOME/$EXPECTED_IDENTITY_FILE_RELATIVE"
+  SSH_KNOWN_HOSTS="$HOME/.ssh/known_hosts_kernstein"
+  SSH_DESTINATION="${EXPECTED_SSH_USER}@${EXPECTED_SSH_HOSTNAME}"
+  LOCK_HELD=0
 }
 
-ssh_config_value() {
-  key=$1
-  file=$2
-  awk -v wanted="$key" '
-    $1 == wanted {
-      sub(/^[^[:space:]]+[[:space:]]+/, "")
-      print
-      exit
-    }
-  ' "$file"
+run_ssh() {
+  ssh \
+    -F /dev/null \
+    -o IdentityFile=none \
+    -i "$SSH_IDENTITY" \
+    -o IdentitiesOnly=yes \
+    -o PubkeyAuthentication=yes \
+    -o PasswordAuthentication=no \
+    -o KbdInteractiveAuthentication=no \
+    -o ForwardAgent=no \
+    -o StrictHostKeyChecking=yes \
+    -o UserKnownHostsFile="$SSH_KNOWN_HOSTS" \
+    -o HostKeyAlias="$EXPECTED_HOST_KEY_ALIAS" \
+    -o HostKeyAlgorithms=ssh-ed25519 \
+    -o Port=22 \
+    -o ConnectTimeout=8 \
+    -o ProxyCommand=none \
+    -o ProxyJump=none \
+    "$@"
 }
 
 validate_ssh_contract() {
-  expected_known_hosts="$HOME/.ssh/known_hosts_kernstein"
-  expected_identity="$HOME/.ssh/id_ed25519_kernstein"
-  expected_identity_short=$(printf '\176/%s' "$EXPECTED_IDENTITY_FILE_RELATIVE")
-  [ -f "$expected_identity" ] ||
-    die "$EX_CONFIG" "dedicated SSH identity is missing: $expected_identity"
-  [ -f "$expected_known_hosts" ] ||
-    die "$EX_CONFIG" "pinned SSH host-key file is missing: $expected_known_hosts"
+  [ -f "$SSH_IDENTITY" ] ||
+    die "$EX_CONFIG" "dedicated SSH identity is missing: $SSH_IDENTITY"
+  [ -f "$SSH_KNOWN_HOSTS" ] ||
+    die "$EX_CONFIG" "pinned SSH host-key file is missing: $SSH_KNOWN_HOSTS"
 
-  ssh_config="$STATE_DIRECTORY/.ssh-config.$$"
   host_key_lookup="$STATE_DIRECTORY/.host-key-lookup.$$"
   host_keys="$STATE_DIRECTORY/.host-keys.$$"
-  trap 'rm -f "$ssh_config" "$host_key_lookup" "$host_keys"' 0 1 2 3 15
+  trap 'rm -f "$host_key_lookup" "$host_keys"' 0 1 2 3 15
 
-  if ! ssh -G -T "$SSH_ALIAS" >"$ssh_config" 2>/dev/null; then
-    die "$EX_CONFIG" "could not resolve SSH configuration for '$SSH_ALIAS'"
-  fi
-
-  effective_hostname=$(ssh_config_value hostname "$ssh_config")
-  effective_user=$(ssh_config_value user "$ssh_config")
-  effective_host_key_alias=$(ssh_config_value hostkeyalias "$ssh_config")
-  effective_known_hosts=$(ssh_config_value userknownhostsfile "$ssh_config")
-  effective_strict=$(ssh_config_value stricthostkeychecking "$ssh_config")
-  effective_identities_only=$(ssh_config_value identitiesonly "$ssh_config")
-  effective_forward_agent=$(ssh_config_value forwardagent "$ssh_config")
-  effective_password_auth=$(ssh_config_value passwordauthentication "$ssh_config")
-  effective_keyboard_auth=$(ssh_config_value kbdinteractiveauthentication "$ssh_config")
-  effective_public_key_auth=$(ssh_config_value pubkeyauthentication "$ssh_config")
-  effective_host_key_algorithms=$(ssh_config_value hostkeyalgorithms "$ssh_config")
-
-  [ "$effective_hostname" = "$EXPECTED_SSH_HOSTNAME" ] ||
-    die "$EX_CONFIG" "SSH alias '$SSH_ALIAS' targets '$effective_hostname', expected '$EXPECTED_SSH_HOSTNAME'"
-  [ "$effective_user" = "$EXPECTED_SSH_USER" ] ||
-    die "$EX_CONFIG" "SSH alias '$SSH_ALIAS' uses user '$effective_user', expected '$EXPECTED_SSH_USER'"
-  [ "$effective_host_key_alias" = "$EXPECTED_HOST_KEY_ALIAS" ] ||
-    die "$EX_CONFIG" "SSH alias '$SSH_ALIAS' must set HostKeyAlias '$EXPECTED_HOST_KEY_ALIAS'"
-  [ "$effective_known_hosts" = "$expected_known_hosts" ] ||
-    die "$EX_CONFIG" "SSH alias '$SSH_ALIAS' must use $expected_known_hosts"
-  case "$effective_strict" in
-    yes|true) ;;
-    *) die "$EX_CONFIG" "SSH alias '$SSH_ALIAS' must enable StrictHostKeyChecking" ;;
-  esac
-  [ "$effective_identities_only" = yes ] ||
-    die "$EX_CONFIG" "SSH alias '$SSH_ALIAS' must enable IdentitiesOnly"
-  [ "$effective_forward_agent" = no ] ||
-    die "$EX_CONFIG" "SSH alias '$SSH_ALIAS' must disable agent forwarding"
-  [ "$effective_password_auth" = no ] ||
-    die "$EX_CONFIG" "SSH alias '$SSH_ALIAS' must disable password authentication"
-  [ "$effective_keyboard_auth" = no ] ||
-    die "$EX_CONFIG" "SSH alias '$SSH_ALIAS' must disable keyboard-interactive authentication"
-  case "$effective_public_key_auth" in
-    yes|true) ;;
-    *) die "$EX_CONFIG" "SSH alias '$SSH_ALIAS' must enable public-key authentication" ;;
-  esac
-  [ "$effective_host_key_algorithms" = ssh-ed25519 ] ||
-    die "$EX_CONFIG" "SSH alias '$SSH_ALIAS' must pin the ssh-ed25519 host-key algorithm"
-  identity_count=$(awk '$1 == "identityfile" { count++ } END { print count + 0 }' "$ssh_config")
-  [ "$identity_count" -eq 1 ] ||
-    die "$EX_CONFIG" "SSH alias '$SSH_ALIAS' must define exactly one IdentityFile"
-  effective_identity=$(ssh_config_value identityfile "$ssh_config")
-  if [ "$effective_identity" != "$expected_identity_short" ] &&
-    [ "$effective_identity" != "$expected_identity" ]; then
-    die "$EX_CONFIG" "SSH alias '$SSH_ALIAS' must use $expected_identity"
-  fi
-
-  if ! ssh-keygen -F "$EXPECTED_HOST_KEY_ALIAS" -f "$expected_known_hosts" \
+  if ! ssh-keygen -F "$EXPECTED_HOST_KEY_ALIAS" -f "$SSH_KNOWN_HOSTS" \
     >"$host_key_lookup" 2>/dev/null; then
     die "$EX_CONFIG" "pinned SSH host key for '$EXPECTED_HOST_KEY_ALIAS' is missing"
   fi
@@ -278,7 +240,7 @@ validate_ssh_contract() {
   [ "$host_key_fingerprint" = "$EXPECTED_SSH_HOST_KEY_FINGERPRINT" ] ||
     die "$EX_CONFIG" "SSH host-key fingerprint mismatch for '$EXPECTED_HOST_KEY_ALIAS'"
 
-  rm -f "$ssh_config" "$host_key_lookup" "$host_keys"
+  rm -f "$host_key_lookup" "$host_keys"
   trap - 0 1 2 3 15
 }
 
@@ -286,7 +248,7 @@ validate_private_path() {
   if ! "$TAILSCALE_BIN" ping --c 1 "$EXPECTED_SSH_HOSTNAME" >/dev/null 2>&1; then
     die "$EX_UNAVAILABLE" "Kernstein is not reachable through the enrolled Tailscale client"
   fi
-  if ! ssh -o BatchMode=yes -o ConnectTimeout=8 "$SSH_ALIAS" \
+  if ! run_ssh -o BatchMode=yes "$SSH_DESTINATION" \
     "test \"\$(hostname)\" = '$EXPECTED_REMOTE_HOSTNAME'"; then
     die "$EX_UNAVAILABLE" "authenticated OpenSSH access to Kernstein failed"
   fi
@@ -298,10 +260,36 @@ validate_operational_contract() {
 }
 
 tunnel_running() {
-  ssh -S "$CONTROL_SOCKET" -O check "$SSH_ALIAS" >/dev/null 2>&1
+  run_ssh -S "$CONTROL_SOCKET" -O check "$SSH_DESTINATION" >/dev/null 2>&1
 }
 
-start_tunnel() {
+release_tunnel_lock() {
+  if [ "${LOCK_HELD:-0}" -eq 1 ]; then
+    rmdir "$TUNNEL_LOCK" 2>/dev/null || true
+    LOCK_HELD=0
+  fi
+}
+
+acquire_tunnel_lock() {
+  if ! mkdir "$TUNNEL_LOCK" 2>/dev/null; then
+    die "$EX_UNAVAILABLE" "another tunnel operation is in progress; retry after it finishes"
+  fi
+  LOCK_HELD=1
+  trap 'release_tunnel_lock' 0
+  trap 'release_tunnel_lock; exit 69' 1 2 3 15
+}
+
+finish_tunnel_operation() {
+  if ! rmdir "$TUNNEL_LOCK" 2>/dev/null; then
+    LOCK_HELD=0
+    trap - 0 1 2 3 15
+    die "$EX_UNAVAILABLE" "could not release tunnel operation lock: $TUNNEL_LOCK"
+  fi
+  LOCK_HELD=0
+  trap - 0 1 2 3 15
+}
+
+start_tunnel_locked() {
   if tunnel_running; then
     say "${PROGRAM_NAME}: tunnel already running at ${LOCAL_RDP_HOST}:${LOCAL_RDP_PORT}"
     return 0
@@ -312,22 +300,22 @@ start_tunnel() {
     die "$EX_UNAVAILABLE" "local TCP port $LOCAL_RDP_PORT is already in use"
   fi
 
-  if ! ssh -M -S "$CONTROL_SOCKET" -fN \
+  if ! run_ssh -M -S "$CONTROL_SOCKET" -fN \
     -L "${LOCAL_RDP_HOST}:${LOCAL_RDP_PORT}:${REMOTE_RDP_HOST}:${REMOTE_RDP_PORT}" \
     -o BatchMode=yes \
     -o ExitOnForwardFailure=yes \
     -o ServerAliveInterval=30 \
     -o ServerAliveCountMax=3 \
-    "$SSH_ALIAS"; then
+    "$SSH_DESTINATION"; then
     die "$EX_UNAVAILABLE" "could not start the authenticated RDP tunnel"
   fi
   tunnel_running || die "$EX_UNAVAILABLE" "SSH exited without a usable control tunnel"
   say "${PROGRAM_NAME}: tunnel started at ${LOCAL_RDP_HOST}:${LOCAL_RDP_PORT}"
 }
 
-stop_tunnel() {
+stop_tunnel_locked() {
   if tunnel_running; then
-    if ! ssh -S "$CONTROL_SOCKET" -O exit "$SSH_ALIAS" >/dev/null; then
+    if ! run_ssh -S "$CONTROL_SOCKET" -O exit "$SSH_DESTINATION" >/dev/null; then
       die "$EX_UNAVAILABLE" "could not stop the SSH tunnel"
     fi
     say "${PROGRAM_NAME}: tunnel stopped"
@@ -335,6 +323,25 @@ stop_tunnel() {
     say "${PROGRAM_NAME}: tunnel is not running"
     [ ! -e "$CONTROL_SOCKET" ] || rm -f "$CONTROL_SOCKET"
   fi
+}
+
+start_tunnel() {
+  acquire_tunnel_lock
+  start_tunnel_locked
+  finish_tunnel_operation
+}
+
+stop_tunnel() {
+  acquire_tunnel_lock
+  stop_tunnel_locked
+  finish_tunnel_operation
+}
+
+restart_tunnel() {
+  acquire_tunnel_lock
+  stop_tunnel_locked
+  start_tunnel_locked
+  finish_tunnel_operation
 }
 
 show_status() {
@@ -402,8 +409,7 @@ main() {
       ;;
     --restart)
       validate_operational_contract
-      stop_tunnel
-      start_tunnel
+      restart_tunnel
       ;;
     launch)
       validate_operational_contract
