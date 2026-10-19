@@ -2,7 +2,9 @@
 <section class="newsletter" aria-labelledby="newsletter-title">
   <h2 id="newsletter-title">{{ newsletter.title | default: "Get new essays by email" }}</h2>
   <p>{{ newsletter.description | default: "Occasional essays about systems, models, and engineering judgment." }}</p>
-  {% if newsletter.enabled and newsletter.action_url %}
+  {% if newsletter.enabled and newsletter.subscribe_url and newsletter.subscribe_url != blank %}
+    <p><a href="{{ newsletter.subscribe_url | escape }}">Subscribe by email</a> or <a href="{{ '/feed.xml' | relative_url }}">subscribe via RSS</a>.</p>
+  {% elsif newsletter.enabled and newsletter.action_url %}
     <form action="{{ newsletter.action_url | escape }}" method="{{ newsletter.method | default: 'post' | escape }}">
       <label for="newsletter-email-{{ include.context | default: 'default' }}">Email address</label>
       <div class="newsletter-fields">

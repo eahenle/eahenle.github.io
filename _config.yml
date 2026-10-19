@@ -23,7 +23,8 @@ header_pages:
   - about.md
 
 newsletter:
-  enabled: false
+  enabled: true
+  subscribe_url: "https://henletech.substack.com/subscribe"
   action_url:
   email_field: email
   method: post
