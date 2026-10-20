@@ -8,4 +8,6 @@ list_title: ' '
 
 Essays and technical projects about agentic systems, engineering judgment,
 software architecture, model behavior, and the occasional unusual piece of
-hardware. **New reader? [Start here](/start-here/).**
+hardware. **New reader? [Start here]({{ '/start-here/' | relative_url }}).**
+
+{% include newsletter.html context="home" %}
