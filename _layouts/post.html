@@ -3,7 +3,11 @@ layout: default
 ---
 <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
   <header class="post-header">
+    {% unless page.hide_post_title %}
     <h1 class="post-title p-name" itemprop="name headline">{{ page.title | escape }}</h1>
+    {% else %}
+    <meta itemprop="headline" content="{{ page.title | escape }}">
+    {% endunless %}
     <p class="post-meta"><time class="dt-published" datetime="{{ page.date | date_to_xmlschema }}" itemprop="datePublished">{{ page.date | date: "%B %-d, %Y" }}</time>{% if page.updated %} · Updated <time datetime="{{ page.updated | date_to_xmlschema }}" itemprop="dateModified">{{ page.updated | date: "%B %-d, %Y" }}</time>{% endif %}</p>
     {% if page.tags.size > 0 %}<p class="post-tags">{% for tag in page.tags %}<a href="{{ '/archive/' | relative_url }}#tag-{{ tag | slugify }}">#{{ tag }}</a>{% unless forloop.last %} {% endunless %}{% endfor %}</p>{% endif %}
   </header>
