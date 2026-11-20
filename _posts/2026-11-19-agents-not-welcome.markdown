@@ -4,9 +4,9 @@ title: "Agents Not Welcome"
 date: 2026-11-19 15:00:00 -0800
 description: "An experiment in forged authority, browser-based prompt injection, and the boundary between what an AI agent reads and what it is allowed to do."
 excerpt: >-
-  <p>An experiment in forged authority, browser-based prompt injection, and the
+  <p><em>An experiment in forged authority, browser-based prompt injection, and the
   increasingly fragile boundary between what an AI agent reads and what it is
-  allowed to do.</p>
+  allowed to do.</em></p>
 tags: [ai, agents, security, prompt-injection]
 hide_post_title: true
 ---
