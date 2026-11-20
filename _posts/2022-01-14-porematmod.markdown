@@ -2,6 +2,7 @@
 layout: post
 title:  "PoreMatMod.jl: Chemical Substructure Find/Replace"
 date:   2022-01-14 00:00:00 -0800
+description: "PoreMatMod.jl is a Julia package for chemical structure modification based on subgraph-search and point-cloud-alignment algorithms."
 ---
 
 ![PoreMatMod.jl Logo](/assets/img/porematmod_logo.jfif)

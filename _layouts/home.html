@@ -1,0 +1,34 @@
+---
+layout: default
+---
+
+<div class="home">
+  {% if page.title %}
+    <h1 class="page-heading">{{ page.title | escape }}</h1>
+  {% endif %}
+
+  {{ content }}
+
+  {% if site.posts.size > 0 %}
+    {% assign date_format = site.minima.date_format | default: "%b %-d, %Y" %}
+    <ul class="post-list" aria-label="Articles">
+      {% for post in site.posts %}
+        <li>
+          <time class="post-meta" datetime="{{ post.date | date_to_xmlschema }}">{{ post.date | date: date_format }}</time>
+          <h2><a class="post-link" href="{{ post.url | relative_url }}">{{ post.title | escape }}</a></h2>
+          {% if site.show_excerpts %}
+            {% assign summary = post.description | default: post.excerpt | strip_html | normalize_whitespace %}
+            {% if summary == empty %}
+              {% assign summary = post.content | strip_html | normalize_whitespace %}
+            {% endif %}
+            {% if summary != empty %}
+              <p class="post-summary">{{ summary | truncatewords: 32, "…" | escape_once }}</p>
+            {% endif %}
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+
+    <p class="rss-subscribe">subscribe <a href="{{ '/feed.xml' | relative_url }}">via RSS</a></p>
+  {% endif %}
+</div>

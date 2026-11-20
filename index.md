@@ -3,7 +3,6 @@
 # To modify the layout, see https://jekyllrb.com/docs/themes/#overriding-theme-defaults
 
 layout: home
-list_title: ' '
 ---
 
 Essays and technical projects about agentic systems, engineering judgment,

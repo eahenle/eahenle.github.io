@@ -2,6 +2,7 @@
 layout: post
 title:  "Graph Kernels and SVM to Predict Bee Toxicity"
 date:   2022-07-15 00:00:00 -0800
+description: "Honey bees and pesticides are both vital to food security, so how do we ensure that one isn't harmed by the other?"
 ---
 
 ![Bee Toxicity Cover Art](/assets/img/bee_toxicity.png)

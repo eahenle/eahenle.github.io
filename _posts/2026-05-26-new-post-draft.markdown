@@ -2,6 +2,7 @@
 layout: post
 title:  "The Cloud Is Not the Final Form of AI"
 date:   2026-05-26 09:00:00 -0700
+description: "Latency, privacy, reliability, energy costs, and bandwidth all favor moving more intelligence closer to the user."
 ---
 
 The AI boom began in the cloud for good reasons: model training required hyperscale infrastructure, GPU supply was constrained, and centralized deployment let teams iterate fast. But those conditions describe the *start* of the cycle, not its end state.
